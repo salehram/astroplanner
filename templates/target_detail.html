@@ -1,0 +1,415 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+  .subexp-input {
+    width: 90px !important;
+    min-width: 90px !important;
+  }
+  .minutes-input {
+    width: 90px !important;
+    min-width: 90px !important;
+  }
+</style>
+
+<!-- HEADER -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h1 class="h3 mb-0">{{ target.name }}</h1>
+    <div class="text-muted">
+      {{ target.catalog_id or "No catalog ID" }} •
+      {{ target.target_type or "Type N/A" }} •
+      RA {{ "%.3f"|format(target.ra_hours) }}h,
+      Dec {{ "%.2f"|format(target.dec_deg) }}°
+    </div>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('edit_target', target_id=target.id) }}"
+       class="btn btn-outline-light btn-sm">Edit</a>
+    <form method="post"
+          action="{{ url_for('delete_target', target_id=target.id) }}"
+          onsubmit="return confirm('Delete target {{ target.name }} and all its data?');">
+      <button class="btn btn-outline-danger btn-sm" type="submit">Delete</button>
+    </form>
+  </div>
+</div>
+
+<!-- ROW 1: PLAN & PALETTE (FULL WIDTH) -->
+<div class="row g-4 mb-4">
+  <div class="col-12">
+    <div class="card bg-secondary text-light">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Plan & Palette</span>
+        <form method="post" action="{{ url_for('new_plan', target_id=target.id) }}"
+              class="d-flex gap-2">
+          <select name="palette" class="form-select form-select-sm">
+            {% for v in ["SHO", "HOO", "LRGB", "LRGBNB"] %}
+              <option value="{{ v }}" {% if v==target.preferred_palette %}selected{% endif %}>
+                {{ v }}
+              </option>
+            {% endfor %}
+          </select>
+          <button class="btn btn-sm btn-outline-light" type="submit">New Plan</button>
+        </form>
+      </div>
+
+      <div class="card-body">
+        {% if plan_data %}
+
+          <p class="mb-1"><strong>Palette:</strong> {{ plan_data.palette }}</p>
+          <p class="mb-2"><strong>Dominant Channel:</strong> {{ plan_data.dominant_channel }}</p>
+
+          <form method="post" action="{{ url_for('update_plan', target_id=target.id) }}" id="plan-form">
+
+            <div class="row mb-3">
+              <div class="col-md-4 mb-2">
+                <label class="form-label">Total Planned (minutes)</label>
+                <input class="form-control form-control-sm"
+                       type="number" step="1" min="0"
+                       name="total_planned_minutes"
+                       value="{{ plan_data.total_planned_minutes }}">
+              </div>
+
+              <div class="col-md-4 mb-2">
+                <label class="form-label">Fallback Sub-exposure (s)</label>
+                <input id="plan_sub_exposure" class="form-control form-control-sm"
+                       type="number" min="1" step="1" value="300">
+              </div>
+            </div>
+
+            <!-- MAIN WIDE TABLE -->
+            <div class="table-responsive" style="white-space: nowrap; padding-bottom: 12px;">
+              <table id="plan-table"
+                     class="table table-sm table-dark align-middle mb-0"
+                     data-tonight-minutes="{{ window_info.total_minutes or 0 }}">
+
+                <thead>
+                  <tr>
+                    <th>Channel</th>
+                    <th>Label</th>
+                    <th>Planned (min)</th>
+                    <th>Sub (s)</th>
+                    <th>Completed (min)</th>
+                    <th>Planned Frames</th>
+                    <th>Done Frames</th>
+                    <th>Remaining Frames</th>
+                    <th>Remaining (min)</th>
+                    <th>Remaining (h:m:s)</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {% for ch in plan_data.channels %}
+                    {% set done = progress_minutes.get(ch.name, 0) %}
+                    {% set done_sec = progress_seconds.get(ch.name, 0) %}
+                    <tr class="plan-row">
+                      <td>{{ ch.name }}</td>
+                      <td>{{ ch.label }}</td>
+
+                      <td>
+                        <input class="form-control form-control-sm channel-minutes minutes-input"
+                               type="number" step="1" min="0"
+                               name="ch_{{ ch.name }}_minutes"
+                               value="{{ ch.planned_minutes }}">
+                      </td>
+
+                      <td>
+                        <input class="form-control form-control-sm channel-subexp subexp-input"
+                               type="number" step="1" min="1"
+                               name="ch_{{ ch.name }}_subexp"
+                               value="{{ ch.sub_exposure_seconds or 300 }}">
+                      </td>
+
+                      <td class="completed-minutes"
+                          data-done-seconds="{{ done_sec|default(0) }}">
+                        {{ "%.1f"|format(done) }}
+                      </td>
+
+                      <td class="planned-frames">-</td>
+                      <td class="done-frames">-</td>
+                      <td class="remaining-frames fw-bold">-</td>
+                      <td class="remaining-minutes fw-bold">-</td>
+                      <td class="remaining-hms fw-bold">-</td>
+                      <td class="status-badge"></td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+
+              </table>
+            </div>
+
+            <button class="btn btn-outline-light btn-sm mt-3" type="submit">Save Plan</button>
+
+          </form>
+        {% else %}
+          <p>No plan yet. Create one above.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ROW 2: TONIGHT'S WINDOW (LEFT) + ADD PROGRESS (RIGHT) -->
+<div class="row g-4 mb-4">
+  <!-- TONIGHT -->
+  <div class="col-lg-6">
+    <div class="card bg-secondary text-light h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Tonight's Window</span>
+        <small class="text-muted">
+          Local TZ:
+          <span title="Taken from OBSERVER_TZ environment variable">
+            {{ window_info.timezone_name }}
+          </span>
+        </small>
+      </div>
+
+      <div class="card-body">
+        {% if window_info.deps_available %}
+          <p><strong>Sunset (local):</strong> {{ window_info.sunset_local }}
+            <span class="text-muted small">[UTC: {{ window_info.sunset_utc }}]</span>
+          </p>
+
+          <p><strong>Dark Start (local):</strong> {{ window_info.dark_start_local }}
+            <span class="text-muted small">[UTC: {{ window_info.dark_start_utc }}]</span>
+          </p>
+
+          <p><strong>Dark End (local):</strong> {{ window_info.dark_end_local }}
+            <span class="text-muted small">[UTC: {{ window_info.dark_end_utc }}]</span>
+          </p>
+
+          <p><strong>Meridian Transit (local):</strong> {{ window_info.meridian_local }}
+            <span class="text-muted small">[UTC: {{ window_info.meridian_utc }}]</span>
+          </p>
+
+          <hr>
+
+          <p><strong>Usable Start (local):</strong> {{ window_info.start_time_local }}
+            <span class="text-muted small">[UTC: {{ window_info.start_time_utc }}]</span>
+          </p>
+
+          <p><strong>Usable End (local):</strong> {{ window_info.end_time_local }}
+            <span class="text-muted small">[UTC: {{ window_info.end_time_utc }}]</span>
+          </p>
+
+          <p><strong>Total Window:</strong>
+            {% if window_info.total_minutes %}
+              {{ window_info.total_minutes }} minutes
+            {% else %}
+              N/A
+            {% endif %}
+          </p>
+
+          <small class="text-muted">
+            Min altitude (approx at mid-window): {{ window_info.min_altitude_deg }}°
+          </small>
+
+        {% else %}
+          <p>{{ window_info.note }}</p>
+          <p>Install astropy + astroplan for full functionality.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- ADD IMAGING PROGRESS -->
+  <div class="col-lg-6">
+    <div class="card bg-secondary text-light h-100">
+      <div class="card-header">Add Imaging Progress</div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('add_progress', target_id=target.id) }}">
+          <div class="row">
+            <div class="col-md-4 mb-2">
+              <label class="form-label">Channel</label>
+              <input class="form-control" name="channel"
+                     placeholder="H, O, S, L, R, G, B" required>
+            </div>
+
+            <div class="col-md-4 mb-2">
+              <label class="form-label">Sub Exposure (s)</label>
+              <input class="form-control" name="sub_exposure_seconds"
+                     type="number" value="300" required>
+            </div>
+
+            <div class="col-md-4 mb-2">
+              <label class="form-label">Sub Count</label>
+              <input class="form-control" name="sub_count"
+                     type="number" value="10" required>
+            </div>
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label">Notes (optional)</label>
+            <input class="form-control" name="notes">
+          </div>
+
+          <button class="btn btn-primary btn-sm" type="submit">Add Progress</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ROW 3: NOTES + PIXINSIGHT WORKFLOW -->
+<div class="row g-4 mb-4">
+
+  <div class="col-lg-6">
+    <div class="card bg-secondary text-light h-100">
+      <div class="card-header">Notes</div>
+      <div class="card-body">
+        {% if target.notes %}
+          <pre class="mb-0" style="white-space: pre-wrap;">{{ target.notes }}</pre>
+        {% else %}
+          <p class="text-muted">No notes yet.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card bg-secondary text-light h-100">
+      <div class="card-header">PixInsight Workflow</div>
+      <div class="card-body">
+        {% if target.pixinsight_workflow %}
+          <pre class="mb-0" style="white-space: pre-wrap;">{{ target.pixinsight_workflow }}</pre>
+        {% else %}
+          <p class="text-muted">No workflow documented yet.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ROW 4: FINAL IMAGE -->
+<div class="row g-4">
+  <div class="col-12">
+    <div class="card bg-secondary text-light">
+      <div class="card-header">Final Image</div>
+
+      <div class="card-body">
+        {% if target.final_image_filename %}
+          <div class="mb-2">
+            <img src="{{ url_for('uploaded_file', filename=target.final_image_filename) }}"
+                 class="img-fluid rounded border border-light">
+          </div>
+          <p class="text-muted small">Saved as {{ target.final_image_filename }}</p>
+        {% else %}
+          <p class="text-muted">No final image uploaded yet.</p>
+        {% endif %}
+
+        <hr>
+
+        <form method="post" enctype="multipart/form-data"
+              action="{{ url_for('upload_final_image', target_id=target.id) }}">
+          <div class="mb-2">
+            <label class="form-label">Upload final processed image</label>
+            <input class="form-control" type="file" name="final_image" accept="image/*">
+          </div>
+          <button class="btn btn-outline-light btn-sm" type="submit">Upload / Replace</button>
+        </form>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+<!-- JS: Progress calculations + status badges -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const globalExpInput = document.getElementById("plan_sub_exposure");
+  const planTable = document.getElementById("plan-table");
+  const rows = document.querySelectorAll("tr.plan-row");
+
+  if (!globalExpInput || !planTable || !rows.length) return;
+
+  const tonightWindowMinutes = parseFloat(planTable.dataset.tonightMinutes || "0") || 0;
+
+  function formatHMS(totalSeconds) {
+    totalSeconds = Math.max(0, Math.floor(totalSeconds));
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
+    return String(h).padStart(2,"0") + ":" +
+           String(m).padStart(2,"0") + ":" +
+           String(s).padStart(2,"0");
+  }
+
+  function recalcFrames() {
+    const globalExp = parseFloat(globalExpInput.value);
+
+    rows.forEach(row => {
+      const minInput = row.querySelector("input.channel-minutes");
+      const subInput = row.querySelector("input.channel-subexp");
+      const doneCell = row.querySelector("td.completed-minutes");
+
+      const pf = row.querySelector(".planned-frames");
+      const df = row.querySelector(".done-frames");
+      const rf = row.querySelector(".remaining-frames");
+      const rm = row.querySelector(".remaining-minutes");
+      const rh = row.querySelector(".remaining-hms");
+      const sb = row.querySelector(".status-badge");
+
+      const mins = parseFloat(minInput.value);
+      const doneSec = parseFloat(doneCell.dataset.doneSeconds || "0");
+      let remainingSec = 0;
+
+      if (!isNaN(mins) && mins > 0) {
+        remainingSec = Math.max(mins * 60 - doneSec, 0);
+      }
+
+      rm.textContent = (remainingSec / 60).toFixed(1);
+      rh.textContent = formatHMS(remainingSec);
+
+      // Status Badge
+      let badge = "";
+      const remMin = remainingSec / 60;
+
+      if (remainingSec <= 0) {
+        badge = '<span class="badge bg-secondary">Done</span>';
+      } else if (tonightWindowMinutes <= 0) {
+        badge = '<span class="badge bg-secondary">No window</span>';
+      } else if (remMin <= tonightWindowMinutes * 0.8) {
+        badge = '<span class="badge bg-success">Finishable tonight</span>';
+      } else if (remMin <= tonightWindowMinutes * 2) {
+        badge = '<span class="badge bg-warning text-dark">Good progress</span>';
+      } else {
+        badge = '<span class="badge bg-dark">Long-term</span>';
+      }
+      sb.innerHTML = badge;
+
+      // Frame math
+      let exp = parseFloat(subInput.value);
+      if (!exp || exp <= 0) exp = globalExp;
+      if (!exp || exp <= 0) {
+        pf.textContent = "-";
+        df.textContent = "-";
+        rf.textContent = "-";
+        return;
+      }
+
+      const plannedFrames = Math.ceil((mins * 60) / exp);
+      const doneFrames = Math.floor(doneSec / exp);
+      const remainingFrames = Math.max(plannedFrames - doneFrames, 0);
+
+      pf.textContent = plannedFrames;
+      df.textContent = doneFrames;
+      rf.textContent = remainingFrames;
+    });
+  }
+
+  globalExpInput.addEventListener("input", recalcFrames);
+
+  rows.forEach(row => {
+    row.querySelectorAll("input").forEach(input => {
+      input.addEventListener("input", recalcFrames);
+    });
+  });
+
+  recalcFrames();
+});
+</script>
+
+{% endblock %}

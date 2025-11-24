@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Astro Planner</h1>
+  <a href="{{ url_for('new_target') }}" class="btn btn-primary btn-sm">
+    + New Target
+  </a>
+</div>
+
+<!-- Tonight's Recommendation -->
+{% if tonight_pick %}
+  {% set t = tonight_pick.target %}
+  <div class="card bg-success bg-gradient text-white mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span>Tonight's Recommendation</span>
+      <small class="text-white-50">
+        Prioritized by completion %, remaining time, and tonight's window
+      </small>
+    </div>
+    <div class="card-body">
+      <h2 class="h5 mb-1">
+        <a href="{{ url_for('target_detail', target_id=t.id) }}"
+           class="text-white text-decoration-none">
+          {{ t.name }}
+        </a>
+      </h2>
+      <p class="mb-2 text-white-50">
+        {{ t.catalog_id or "No catalog ID" }} •
+        {{ t.target_type or "Type N/A" }}
+      </p>
+      <div class="row">
+        <div class="col-md-3 mb-2">
+          <div class="small text-white-50">Completion</div>
+          <div class="fw-bold">{{ tonight_pick.completion_pct }}%</div>
+        </div>
+        <div class="col-md-3 mb-2">
+          <div class="small text-white-50">Remaining Total</div>
+          <div class="fw-bold">{{ tonight_pick.remaining_total }} min</div>
+        </div>
+        <div class="col-md-3 mb-2">
+          <div class="small text-white-50">Tonight's Window</div>
+          <div class="fw-bold">{{ tonight_pick.window_minutes }} min</div>
+        </div>
+        <div class="col-md-3 mb-2">
+          <div class="small text-white-50">Priority Score</div>
+          <div class="fw-bold">{{ tonight_pick.priority_score }}</div>
+        </div>
+      </div>
+      <div class="mt-2">
+        <div class="small text-white-50">Focus Channel</div>
+        <div class="fw-bold">
+          {% if tonight_pick.suggested_channel %}
+            {{ tonight_pick.suggested_channel_label or tonight_pick.suggested_channel }}
+            <span class="text-white-50">({{ tonight_pick.suggested_channel }})</span>
+          {% else %}
+            -
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+{% else %}
+  <div class="alert alert-secondary">
+    No clear "tonight" recommendation yet. Add targets with plans and some captured data.
+  </div>
+{% endif %}
+
+<!-- All Targets Table -->
+<div class="card bg-secondary text-light">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span>All Targets</span>
+    <small class="text-muted">Sorted by priority (highest first)</small>
+  </div>
+  <div class="card-body">
+    {% if target_summaries %}
+      {% set sorted_summaries = target_summaries|sort(attribute='priority_score', reverse=True) %}
+      <div class="table-responsive">
+        <table class="table table-sm table-dark align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Target</th>
+              <th>Type</th>
+              <th>Palette</th>
+              <th>Completion %</th>
+              <th>Planned (min)</th>
+              <th>Done (min)</th>
+              <th>Remaining (min)</th>
+              <th>Tonight Window (min)</th>
+              <th>Tonight Gain (min)</th>
+              <th>Priority</th>
+              <th>Suggested Channel</th>
+              <th style="width: 130px;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in sorted_summaries %}
+              {% set t = s.target %}
+              <tr>
+                <td>
+                  <a href="{{ url_for('target_detail', target_id=t.id) }}"
+                     class="text-light text-decoration-none">
+                    {{ t.name }}
+                  </a>
+                  <div class="small text-muted">
+                    {{ t.catalog_id or "" }}
+                  </div>
+                </td>
+                <td>{{ t.target_type or "N/A" }}</td>
+                <td>
+                  {% if s.plan_data %}
+                    {{ s.plan_data.palette }}
+                  {% else %}
+                    <span class="text-muted">No plan</span>
+                  {% endif %}
+                </td>
+                <td>{{ s.completion_pct }}%</td>
+                <td>{{ s.planned_total }}</td>
+                <td>{{ s.done_total }}</td>
+                <td>{{ s.remaining_total }}</td>
+                <td>{{ s.window_minutes }}</td>
+                <td>{{ s.best_tonight_minutes }}</td>
+                <td>{{ s.priority_score }}</td>
+                <td>
+                  {% if s.suggested_channel %}
+                    {{ s.suggested_channel_label or s.suggested_channel }}
+                    <span class="text-muted small">({{ s.suggested_channel }})</span>
+                  {% else %}
+                    <span class="text-muted">-</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <div class="d-flex gap-1">
+                    <a href="{{ url_for('target_detail', target_id=t.id) }}"
+                       class="btn btn-outline-light btn-sm">
+                      View
+                    </a>
+                    <form method="post"
+                          action="{{ url_for('delete_target', target_id=t.id) }}"
+                          onsubmit="return confirm('Delete target {{ t.name }} and all its data?');">
+                      <button class="btn btn-outline-danger btn-sm" type="submit">
+                        Del
+                      </button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="text-muted mb-0">
+        No targets yet. Click <strong>+ New Target</strong> to get started.
+      </p>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

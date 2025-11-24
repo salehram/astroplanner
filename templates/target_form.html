@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="h4 mb-3">
+  {% if target %}Edit Target{% else %}New Target{% endif %}
+</h1>
+
+<form method="post">
+  <div class="row">
+    <div class="col-md-6">
+
+      <!-- TARGET NAME -->
+      <div class="mb-3">
+        <label class="form-label">Name</label>
+        <input class="form-control" name="name"
+               value="{{ (target and target.name) or '' }}" required>
+      </div>
+
+      <!-- CATALOG ID + RESOLVE BUTTON -->
+      <div class="mb-3">
+        <label class="form-label">Catalog ID / Designation (e.g. NGC 6992, M31, IC 1805)</label>
+        <div class="input-group">
+          <input class="form-control" id="catalog_id" name="catalog_id"
+                 value="{{ (target and target.catalog_id) or '' }}">
+          <button class="btn btn-outline-light" type="button" id="btn-resolve">
+            Resolve RA/Dec
+          </button>
+        </div>
+        <div class="form-text">
+          Enter an object name (NGC, M, IC, Sh2-,…), then click Resolve.
+        </div>
+      </div>
+
+      <!-- RA -->
+      <div class="mb-3">
+        <label class="form-label">RA (decimal hours)</label>
+        <input class="form-control" id="ra_hours" name="ra_hours"
+               type="number" step="0.0001"
+               value="{{ (target and target.ra_hours) or '' }}" required>
+        <div class="form-text">Example: 20.733 for 20h 44m.</div>
+      </div>
+
+      <!-- DEC -->
+      <div class="mb-3">
+        <label class="form-label">Dec (decimal degrees)</label>
+        <input class="form-control" id="dec_deg" name="dec_deg"
+               type="number" step="0.001"
+               value="{{ (target and target.dec_deg) or '' }}" required>
+      </div>
+
+      <!-- TARGET TYPE -->
+      <div class="mb-3">
+        <label class="form-label">Target Type</label>
+        {% set ttype = target.target_type if target else '' %}
+        <select class="form-select" name="target_type">
+          {% for v in ["emission", "diffuse", "reflection", "galaxy", "cluster", "other"] %}
+          <option value="{{ v }}" {% if ttype==v %}selected{% endif %}>
+            {{ v|capitalize }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- PALETTE -->
+      <div class="mb-3">
+        <label class="form-label">Preferred Palette</label>
+        {% set pal = target.preferred_palette if target else 'SHO' %}
+        <select class="form-select" name="preferred_palette">
+          {% for v in ["SHO", "HOO", "LRGB", "LRGBNB"] %}
+          <option value="{{ v }}" {% if pal==v %}selected{% endif %}>
+            {{ v }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- PACKUP TIME -->
+      <div class="mb-3">
+        <label class="form-label">Pack-up Time (local, HH:MM)</label>
+        <input class="form-control" name="packup_time_local"
+               value="{{ (target and target.packup_time_local) or '01:00' }}">
+      </div>
+
+    </div>
+
+    <!-- RIGHT SIDE: NOTES + WORKFLOW -->
+    <div class="col-md-6">
+
+      <!-- NOTES -->
+      <div class="mb-3">
+        <label class="form-label">Notes</label>
+        <textarea class="form-control" name="notes" rows="4">{{ (target and target.notes) or '' }}</textarea>
+      </div>
+
+      <!-- PIXINSIGHT WORKFLOW -->
+      <div class="mb-3">
+        <label class="form-label">PixInsight Workflow (free text, markdown, steps…)</label>
+        <textarea class="form-control" name="pixinsight_workflow" rows="6">
+{{ (target and target.pixinsight_workflow) or '' }}</textarea>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SUBMIT BUTTONS -->
+  <button class="btn btn-primary mt-2" type="submit">
+    {% if target %}Save{% else %}Create{% endif %}
+  </button>
+  <a href="{{ url_for('index') }}" class="btn btn-secondary mt-2">Cancel</a>
+</form>
+
+<!-- JAVASCRIPT FOR AUTO RESOLUTION -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+  const btn = document.getElementById("btn-resolve");
+  if (!btn) return;
+
+  const catalogInput = document.getElementById("catalog_id");
+  const raInput = document.getElementById("ra_hours");
+  const decInput = document.getElementById("dec_deg");
+
+  btn.addEventListener("click", async function () {
+    const name = (catalogInput.value || "").trim();
+    if (!name) {
+      alert("Please enter a designation first (e.g. 'NGC 6992').");
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = "Resolving...";
+
+    try {
+      const resp = await fetch(`/api/resolve?name=${encodeURIComponent(name)}`);
+      const data = await resp.json();
+
+      if (!resp.ok) {
+        alert(data.error || "Name resolution failed.");
+      } else {
+        if (typeof data.ra_hours === "number") {
+          raInput.value = data.ra_hours.toFixed(4);
+        }
+        if (typeof data.dec_deg === "number") {
+          decInput.value = data.dec_deg.toFixed(4);
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Connection error while resolving object name.");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Resolve RA/Dec";
+    }
+  });
+
+});
+</script>
+
+{% endblock %}

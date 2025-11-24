@@ -1,0 +1,8 @@
+flask==3.0.3
+flask_sqlalchemy==3.1.1
+sqlalchemy==2.0.32
+werkzeug==3.0.3
+
+# For the sky calculations:
+astropy==6.0.1
+astroplan==0.9

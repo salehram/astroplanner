@@ -1,0 +1,17 @@
+version: "3.9"
+
+services:
+  astroplanner:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - SECRET_KEY=change-me
+      - OBSERVER_LAT=24.7136
+      - OBSERVER_LON=46.6753
+      - OBSERVER_ELEV_M=600
+      # For external DB, uncomment and set:
+      # - DATABASE_URL=postgresql+psycopg2://user:pass@postgres/astroplanner
+    volumes:
+      - ./uploads:/app/uploads
+    restart: unless-stopped
