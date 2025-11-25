@@ -41,66 +41,89 @@ def compute_target_window(
     min_altitude_deg: float = 30.0,
 ):
     """
-    Compute basic observing window info for tonight for the given target.
+    Compute observing window information for tonight for a celestial target.
 
-    Returns a dict with:
+    Returned structure:
       deps_available: bool
-      note: str (if deps not available)
-      sunset_utc, sunset_local: str
-      dark_start_utc, dark_start_local: str
-      dark_end_utc, dark_end_local: str
-      meridian_utc, meridian_local: str
-      start_time_utc, start_time_local: str
-      end_time_utc, end_time_local: str
-      total_minutes: int | None
-      min_altitude_deg: float
+      note: str
+      timezone_name: str
+
+      sunset_local / sunset_utc
+      dark_start_local / dark_start_utc
+      dark_end_local / dark_end_utc
+      meridian_local / meridian_utc
+
+      start_time_local / start_time_utc   (altitude-clipped + packup-validated window)
+      end_time_local / end_time_utc
+      total_minutes
+
+      raw_start_local/raw_end_local/raw_total_minutes  (dark + packup window before altitude clipping)
+
+      min_altitude_deg
+      midpoint_altitude_deg
+      altitude_profile: list of {time_label: HH:MM, alt_deg: float}
     """
+
+    tz_name = os.environ.get("OBSERVER_TZ", "Asia/Riyadh")
+
+    # Robust timezone loader for Windows
+    try:
+        local_tz = ZoneInfo(tz_name)
+    except Exception:
+        # if user wants KSA and system lacks tzdata → hardcode UTC+3
+        if tz_name in ("Asia/Riyadh", "KSA", "UTC+3"):
+            local_tz = datetime.timezone(datetime.timedelta(hours=3))
+            tz_name = "UTC+3"
+        else:
+            local_tz = datetime.timezone.utc
+            tz_name = "UTC"
+
     try:
         import astropy.units as u
         from astropy.time import Time
-        from astropy.coordinates import SkyCoord, EarthLocation, AltAz, get_sun
+        from astropy.coordinates import SkyCoord, EarthLocation, AltAz
         from astroplan import Observer
     except ImportError:
         return {
             "deps_available": False,
-            "note": "Astropy/astroplan not installed in this environment.",
+            "note": "Astropy/astroplan not installed.",
             "total_minutes": None,
+            "timezone_name": tz_name,
         }
 
-    # Local timezone from env or default to Riyadh
-    tz_name = os.environ.get("OBSERVER_TZ", "Asia/Riyadh")
-    try:
-        local_tz = ZoneInfo(tz_name)
-    except Exception:
-        local_tz = datetime.timezone.utc
-        tz_name = "UTC"
-
-    # Observer location
+    # Location
     location = EarthLocation(
         lat=latitude_deg * u.deg,
         lon=longitude_deg * u.deg,
         height=elevation_m * u.m,
     )
 
-    # "Now" in UTC for tonight’s calculations
+    # Now in UTC
     now_utc = datetime.datetime.now(datetime.timezone.utc)
     t_now = Time(now_utc)
 
-    # Astroplan observer (timezone can be string or tzinfo)
-    observer = Observer(location=location, name="LocalObserver", timezone=tz_name)
+    observer = Observer(location=location, timezone=local_tz, name="LocalObserver")
 
-    # Target coordinates
     coord = SkyCoord(ra=ra_hours * u.hourangle, dec=dec_deg * u.deg)
 
-    # Helper to make UTC/local datetime pairs from astropy Time
-    def time_pair(t: Time | None):
-        if t is None:
+    def fmt(dt: datetime.datetime | None) -> str:
+        if not dt:
+            return "N/A"
+        return dt.strftime("%Y-%m-%d %H:%M:%S")  # precise to the second
+
+    def fmt_short(dt: datetime.datetime | None) -> str:
+        if not dt:
+            return ""
+        return dt.strftime("%H:%M")
+
+    def tp(t_astropy: Time | None):
+        if t_astropy is None:
             return None, None
-        dt_utc = t.to_datetime(timezone=datetime.timezone.utc)
+        dt_utc = t_astropy.to_datetime(timezone=datetime.timezone.utc)
         dt_local = dt_utc.astimezone(local_tz)
         return dt_utc, dt_local
 
-    # Compute sunset & nautical twilight for "tonight"
+    # Twilight and sunset
     try:
         sunset = observer.sun_set_time(t_now, which="nearest")
         dark_start = observer.twilight_evening_nautical(t_now, which="nearest")
@@ -108,88 +131,128 @@ def compute_target_window(
     except Exception:
         return {
             "deps_available": False,
-            "note": "Could not compute sun/twilight times for this location/date.",
+            "note": "Could not compute twilight times.",
             "total_minutes": None,
+            "timezone_name": tz_name,
         }
 
-    # Target meridian transit time
+    # Transit
     try:
-        meridian_time = observer.target_meridian_transit_time(t_now, coord, which="nearest")
+        meridian = observer.target_meridian_transit_time(t_now, coord, which="nearest")
     except Exception:
-        meridian_time = None
+        meridian = None
 
-    sunset_utc, sunset_local = time_pair(sunset)
-    dark_start_utc, dark_start_local = time_pair(dark_start)
-    dark_end_utc, dark_end_local = time_pair(dark_end)
-    meridian_utc, meridian_local = time_pair(meridian_time) if meridian_time is not None else (None, None)
+    sunset_utc, sunset_local = tp(sunset)
+    dark_start_utc, dark_start_local = tp(dark_start)
+    dark_end_utc, dark_end_local = tp(dark_end)
+    meridian_utc, meridian_local = tp(meridian) if meridian else (None, None)
 
-    # If anything is missing, bail out gracefully
-    if not (sunset_local and dark_start_local and dark_end_local):
-        return {
-            "deps_available": False,
-            "note": "Insufficient data to compute night window.",
-            "total_minutes": None,
-        }
-
-    # Determine local packup time as a datetime
-    # We base "packup date" on the dark_start_local date and roll to next day if needed
+    # Pack-up time (local)
     if packup_time_local:
-        packup_dt_local = datetime.datetime.combine(
+        pack_local = datetime.datetime.combine(
             dark_start_local.date(), packup_time_local, tzinfo=local_tz
         )
-        # If packup time is earlier or equal to dark start (e.g. 01:00 after midnight),
-        # move it to the next day.
-        if packup_dt_local <= dark_start_local:
-            packup_dt_local += datetime.timedelta(days=1)
+        if pack_local <= dark_start_local:
+            pack_local += datetime.timedelta(days=1)
     else:
-        packup_dt_local = dark_end_local
+        pack_local = dark_end_local
 
-    # Usable window start/end in LOCAL time (simple version: from dark start to min(dark_end, packup))
-    start_local = dark_start_local
-    end_local = min(dark_end_local, packup_dt_local)
+    base_start_local = dark_start_local
+    base_end_local = min(dark_end_local, pack_local)
 
-    if end_local <= start_local:
-        total_minutes = 0
+    if base_end_local <= base_start_local:
+        raw_total = 0
     else:
-        total_minutes = int(round((end_local - start_local).total_seconds() / 60.0))
+        raw_total = int((base_end_local - base_start_local).total_seconds() // 60)
 
-    # Rough altitude at the midpoint of the window
+    # Altitude clipping
+    from astropy.time import Time as ATime
+
+    steps = 60
+    sample_times = []
+    altitudes = []
+    above = []
+
+    if base_end_local > base_start_local:
+        delta = (base_end_local - base_start_local) / steps
+        for i in range(steps + 1):
+            t_loc = base_start_local + delta * i
+            t_utc = t_loc.astimezone(datetime.timezone.utc)
+            t_ast = ATime(t_utc)
+            altaz = coord.transform_to(AltAz(obstime=t_ast, location=location))
+            alt = float(altaz.alt.deg)
+            sample_times.append(t_loc)
+            altitudes.append(alt)
+            above.append(alt >= min_altitude_deg)
+    else:
+        sample_times = []
+        altitudes = []
+        above = []
+
+    valid_i = [i for i, ok in enumerate(above) if ok]
+
+    if valid_i:
+        start_local = sample_times[valid_i[0]]
+        end_local = sample_times[valid_i[-1]]
+    else:
+        start_local = base_start_local
+        end_local = base_start_local
+
+    total_minutes = int(max((end_local - start_local).total_seconds() // 60, 0))
+
+    # Midpoint altitude
     if end_local > start_local:
         mid_local = start_local + (end_local - start_local) / 2
         mid_utc = mid_local.astimezone(datetime.timezone.utc)
         t_mid = Time(mid_utc)
-        altaz_mid = coord.transform_to(AltAz(obstime=t_mid, location=location))
-        min_altitude_val = float(altaz_mid.alt.deg)
+        alt_mid = coord.transform_to(AltAz(obstime=t_mid, location=location))
+        midpoint_alt = round(float(alt_mid.alt.deg), 1)
     else:
-        min_altitude_val = float("nan")
+        midpoint_alt = None
 
-    # Build UTC versions of start/end from local
     start_utc = start_local.astimezone(datetime.timezone.utc)
     end_utc = end_local.astimezone(datetime.timezone.utc)
+    raw_start_utc = base_start_local.astimezone(datetime.timezone.utc)
+    raw_end_utc = base_end_local.astimezone(datetime.timezone.utc)
 
-    def fmt(dt: datetime.datetime | None):
-        if not dt:
-            return "N/A"
-        # Full date+time, 24h
-        return dt.strftime("%Y-%m-%d %H:%M")
+    altitude_profile = [
+        {"time_label": fmt_short(t), "alt_deg": round(a, 1)}
+        for t, a in zip(sample_times, altitudes)
+    ]
 
     return {
         "deps_available": True,
         "note": "",
+        "timezone_name": tz_name,
+
         "sunset_local": fmt(sunset_local),
         "sunset_utc": fmt(sunset_utc),
+
         "dark_start_local": fmt(dark_start_local),
         "dark_start_utc": fmt(dark_start_utc),
+
         "dark_end_local": fmt(dark_end_local),
         "dark_end_utc": fmt(dark_end_utc),
+
         "meridian_local": fmt(meridian_local),
         "meridian_utc": fmt(meridian_utc),
+
         "start_time_local": fmt(start_local),
         "start_time_utc": fmt(start_utc),
         "end_time_local": fmt(end_local),
         "end_time_utc": fmt(end_utc),
         "total_minutes": total_minutes,
-        "min_altitude_deg": round(min_altitude_val, 1) if min_altitude_val == min_altitude_val else None,
+
+        "raw_start_local": fmt(base_start_local),
+        "raw_start_utc": fmt(raw_start_utc),
+        "raw_end_local": fmt(base_end_local),
+        "raw_end_utc": fmt(raw_end_utc),
+        "raw_total_minutes": raw_total,
+
+        "min_altitude_deg": float(min_altitude_deg),
+        "midpoint_altitude_deg": midpoint_alt,
+
+        "altitude_profile": altitude_profile,
     }
 
 

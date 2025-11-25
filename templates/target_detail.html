@@ -10,6 +10,12 @@
     width: 90px !important;
     min-width: 90px !important;
   }
+
+  /* Allow header text in the plan table to wrap to 2 lines */
+  #plan-table th {
+    white-space: normal;
+    vertical-align: middle;
+  }
 </style>
 
 <!-- HEADER -->
@@ -78,7 +84,7 @@
             </div>
 
             <!-- MAIN WIDE TABLE -->
-            <div class="table-responsive" style="white-space: nowrap; padding-bottom: 12px;">
+            <div class="table-responsive" style="padding-bottom: 12px;">
               <table id="plan-table"
                      class="table table-sm table-dark align-middle mb-0"
                      data-tonight-minutes="{{ window_info.total_minutes or 0 }}">
@@ -88,6 +94,7 @@
                     <th>Channel</th>
                     <th>Label</th>
                     <th>Planned (min)</th>
+                    <th>Planned (h:m:s)</th>
                     <th>Sub (s)</th>
                     <th>Completed (min)</th>
                     <th>Planned Frames</th>
@@ -107,26 +114,39 @@
                       <td>{{ ch.name }}</td>
                       <td>{{ ch.label }}</td>
 
+                      <!-- Planned minutes (editable) -->
                       <td>
                         <input class="form-control form-control-sm channel-minutes minutes-input"
-                               type="number" step="1" min="0"
-                               name="ch_{{ ch.name }}_minutes"
-                               value="{{ ch.planned_minutes }}">
+                              type="number" step="1" min="0"
+                              name="ch_{{ ch.name }}_minutes"
+                              value="{{ ch.planned_minutes }}">
                       </td>
 
+                      <!-- Planned H:M:S (computed) -->
+                      <td class="planned-hms fw-bold">-</td>
+
+                      <!-- Sub-exposure -->
                       <td>
                         <input class="form-control form-control-sm channel-subexp subexp-input"
-                               type="number" step="1" min="1"
-                               name="ch_{{ ch.name }}_subexp"
-                               value="{{ ch.sub_exposure_seconds or 300 }}">
+                              type="number" step="1" min="1"
+                              name="ch_{{ ch.name }}_subexp"
+                              value="{{ ch.sub_exposure_seconds or 300 }}">
                       </td>
 
+                      <!-- Completed minutes -->
                       <td class="completed-minutes"
                           data-done-seconds="{{ done_sec|default(0) }}">
                         {{ "%.1f"|format(done) }}
                       </td>
 
-                      <td class="planned-frames">-</td>
+                      <!-- Planned frames (editable – drives minutes if you change it) -->
+                      <td>
+                        <input class="form-control form-control-sm planned-frames-input"
+                              type="number" step="1" min="0"
+                              value="">
+                      </td>
+
+                      <!-- Done / remaining -->
                       <td class="done-frames">-</td>
                       <td class="remaining-frames fw-bold">-</td>
                       <td class="remaining-minutes fw-bold">-</td>
@@ -150,7 +170,7 @@
   </div>
 </div>
 
-<!-- ROW 2: TONIGHT'S WINDOW (LEFT) + ADD PROGRESS (RIGHT) -->
+<!-- ROW 2: TONIGHT'S WINDOW (LEFT) + RIGHT COLUMN STACK (PROGRESS + NOTES + PIXINSIGHT) -->
 <div class="row g-4 mb-4">
   <!-- TONIGHT -->
   <div class="col-lg-6">
@@ -160,50 +180,83 @@
         <small class="text-muted">
           Local TZ:
           <span title="Taken from OBSERVER_TZ environment variable">
-            {{ window_info.timezone_name }}
+            {{ window_info.timezone_name or "Unknown" }}
           </span>
         </small>
       </div>
 
       <div class="card-body">
         {% if window_info.deps_available %}
-          <p><strong>Sunset (local):</strong> {{ window_info.sunset_local }}
-            <span class="text-muted small">[UTC: {{ window_info.sunset_utc }}]</span>
+          <p class="mb-1">
+            <strong>Sunset (local):</strong> {{ window_info.sunset_local }}
+            <span class="text-warning small">[UTC: {{ window_info.sunset_utc }}]</span>
           </p>
 
-          <p><strong>Dark Start (local):</strong> {{ window_info.dark_start_local }}
-            <span class="text-muted small">[UTC: {{ window_info.dark_start_utc }}]</span>
+          <p class="mb-1">
+            <strong>Dark Start (local):</strong> {{ window_info.dark_start_local }}
+            <span class="text-warning small">[UTC: {{ window_info.dark_start_utc }}]</span>
           </p>
 
-          <p><strong>Dark End (local):</strong> {{ window_info.dark_end_local }}
-            <span class="text-muted small">[UTC: {{ window_info.dark_end_utc }}]</span>
+          <p class="mb-1">
+            <strong>Dark End (local):</strong> {{ window_info.dark_end_local }}
+            <span class="text-warning small">[UTC: {{ window_info.dark_end_utc }}]</span>
           </p>
 
-          <p><strong>Meridian Transit (local):</strong> {{ window_info.meridian_local }}
-            <span class="text-muted small">[UTC: {{ window_info.meridian_utc }}]</span>
+          <p class="mb-1">
+            <strong>Meridian Transit (local):</strong> {{ window_info.meridian_local }}
+            <span class="text-warning small">[UTC: {{ window_info.meridian_utc }}]</span>
           </p>
 
-          <hr>
+          <hr class="my-2">
 
-          <p><strong>Usable Start (local):</strong> {{ window_info.start_time_local }}
-            <span class="text-muted small">[UTC: {{ window_info.start_time_utc }}]</span>
+          <p class="mb-1">
+            <strong>Effective Start (local):</strong> {{ window_info.start_time_local }}
+            <span class="text-warning small">[UTC: {{ window_info.start_time_utc }}]</span>
           </p>
 
-          <p><strong>Usable End (local):</strong> {{ window_info.end_time_local }}
-            <span class="text-muted small">[UTC: {{ window_info.end_time_utc }}]</span>
+          <p class="mb-1">
+            <strong>Effective End (local):</strong> {{ window_info.end_time_local }}
+            <span class="text-warning small">[UTC: {{ window_info.end_time_utc }}]</span>
           </p>
 
-          <p><strong>Total Window:</strong>
-            {% if window_info.total_minutes %}
+          <p class="mb-1">
+            <strong>Total Window:</strong>
+            {% if window_info.total_minutes is not none %}
               {{ window_info.total_minutes }} minutes
             {% else %}
               N/A
             {% endif %}
           </p>
 
-          <small class="text-muted">
-            Min altitude (approx at mid-window): {{ window_info.min_altitude_deg }}°
-          </small>
+          <p class="mb-1 small text-muted">
+            Altitude threshold used: ≥ {{ window_info.min_altitude_deg }}° •
+            Mid-window altitude:
+            {% if window_info.midpoint_altitude_deg is not none %}
+              {{ window_info.midpoint_altitude_deg }}°
+            {% else %}
+              N/A
+            {% endif %}
+          </p>
+
+          <!-- Why this window is this long -->
+          <div class="mt-2 small text-muted">
+            <strong>Why is this window {{ window_info.total_minutes }} min?</strong><br>
+            • Nautical night (local): {{ window_info.dark_start_local }} → {{ window_info.dark_end_local }}<br>
+            • Pack-up time (local clock): {{ target.packup_time_local or "none (using full dark)" }}<br>
+            • Base dark+packup window:
+              {{ window_info.raw_start_local }} → {{ window_info.raw_end_local }}
+              ({{ window_info.raw_total_minutes }} min)<br>
+            • Applying altitude ≥ {{ window_info.min_altitude_deg }}° gives:
+              {{ window_info.start_time_local }} → {{ window_info.end_time_local }}
+              ({{ window_info.total_minutes }} min).
+          </div>
+
+          <!-- Altitude chart -->
+          {% if window_info.altitude_profile and window_info.altitude_profile|length > 0 %}
+            <hr class="my-3">
+            <h6 class="small text-uppercase text-muted mb-1">Altitude over night</h6>
+            <canvas id="altitudeChart" height="160"></canvas>
+          {% endif %}
 
         {% else %}
           <p>{{ window_info.note }}</p>
@@ -213,9 +266,10 @@
     </div>
   </div>
 
-  <!-- ADD IMAGING PROGRESS -->
-  <div class="col-lg-6">
-    <div class="card bg-secondary text-light h-100">
+  <!-- RIGHT COLUMN STACK: PROGRESS + NOTES + PIXINSIGHT -->
+  <div class="col-lg-6 d-flex flex-column gap-4">
+    <!-- ADD IMAGING PROGRESS -->
+    <div class="card bg-secondary text-light">
       <div class="card-header">Add Imaging Progress</div>
       <div class="card-body">
         <form method="post" action="{{ url_for('add_progress', target_id=target.id) }}">
@@ -248,41 +302,34 @@
         </form>
       </div>
     </div>
-  </div>
-</div>
 
-<!-- ROW 3: NOTES + PIXINSIGHT WORKFLOW -->
-<div class="row g-4 mb-4">
-
-  <div class="col-lg-6">
-    <div class="card bg-secondary text-light h-100">
+    <!-- NOTES -->
+    <div class="card bg-secondary text-light">
       <div class="card-header">Notes</div>
       <div class="card-body">
         {% if target.notes %}
           <pre class="mb-0" style="white-space: pre-wrap;">{{ target.notes }}</pre>
         {% else %}
-          <p class="text-muted">No notes yet.</p>
+          <p class="text-muted mb-0">No notes yet.</p>
         {% endif %}
       </div>
     </div>
-  </div>
 
-  <div class="col-lg-6">
-    <div class="card bg-secondary text-light h-100">
+    <!-- PIXINSIGHT WORKFLOW -->
+    <div class="card bg-secondary text-light">
       <div class="card-header">PixInsight Workflow</div>
       <div class="card-body">
         {% if target.pixinsight_workflow %}
           <pre class="mb-0" style="white-space: pre-wrap;">{{ target.pixinsight_workflow }}</pre>
         {% else %}
-          <p class="text-muted">No workflow documented yet.</p>
+          <p class="text-muted mb-0">No workflow documented yet.</p>
         {% endif %}
       </div>
     </div>
   </div>
-
 </div>
 
-<!-- ROW 4: FINAL IMAGE -->
+<!-- ROW: FINAL IMAGE -->
 <div class="row g-4">
   <div class="col-12">
     <div class="card bg-secondary text-light">
@@ -315,17 +362,19 @@
   </div>
 </div>
 
+<!-- Chart.js for altitude plot -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<!-- JS: Progress calculations + status badges -->
+<!-- JS: Progress calculations + status badges + altitude chart -->
 <script>
 document.addEventListener("DOMContentLoaded", function () {
   const globalExpInput = document.getElementById("plan_sub_exposure");
   const planTable = document.getElementById("plan-table");
   const rows = document.querySelectorAll("tr.plan-row");
 
-  if (!globalExpInput || !planTable || !rows.length) return;
-
-  const tonightWindowMinutes = parseFloat(planTable.dataset.tonightMinutes || "0") || 0;
+  const tonightWindowMinutes = planTable
+    ? parseFloat(planTable.dataset.tonightMinutes || "0") || 0
+    : 0;
 
   function formatHMS(totalSeconds) {
     totalSeconds = Math.max(0, Math.floor(totalSeconds));
@@ -338,34 +387,72 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function recalcFrames() {
-    const globalExp = parseFloat(globalExpInput.value);
+    if (!planTable) return;
+
+    const globalExp = globalExpInput
+      ? parseFloat(globalExpInput.value)
+      : NaN;
 
     rows.forEach(row => {
       const minInput = row.querySelector("input.channel-minutes");
       const subInput = row.querySelector("input.channel-subexp");
       const doneCell = row.querySelector("td.completed-minutes");
+      const framesInput = row.querySelector("input.planned-frames-input");
+      const plannedHmsCell = row.querySelector(".planned-hms");
 
-      const pf = row.querySelector(".planned-frames");
       const df = row.querySelector(".done-frames");
       const rf = row.querySelector(".remaining-frames");
       const rm = row.querySelector(".remaining-minutes");
       const rh = row.querySelector(".remaining-hms");
       const sb = row.querySelector(".status-badge");
 
-      const mins = parseFloat(minInput.value);
-      const doneSec = parseFloat(doneCell.dataset.doneSeconds || "0");
-      let remainingSec = 0;
+      if (!minInput || !subInput || !doneCell) return;
 
-      if (!isNaN(mins) && mins > 0) {
-        remainingSec = Math.max(mins * 60 - doneSec, 0);
+      // Base values
+      let mins = parseFloat(minInput.value);
+      if (isNaN(mins) || mins < 0) mins = 0;
+
+      let exp = parseFloat(subInput.value);
+      if (isNaN(exp) || exp <= 0) exp = globalExp;
+      if (isNaN(exp) || exp <= 0) exp = 300;  // last-resort fallback
+
+      // Sync minutes <-> planned frames
+      if (framesInput) {
+        const active = document.activeElement;
+        let framesVal = parseFloat(framesInput.value);
+
+        if (active === framesInput && !isNaN(framesVal) && framesVal >= 0) {
+          // User is editing frames: drive minutes from frames
+          mins = (framesVal * exp) / 60.0;
+          minInput.value = mins.toFixed(1);
+        } else {
+          // User is editing minutes / subexposure / global exp:
+          // recompute frames from minutes
+          if (mins > 0 && exp > 0) {
+            framesVal = Math.ceil((mins * 60.0) / exp);
+          } else {
+            framesVal = 0;
+          }
+          framesInput.value = framesVal > 0 ? framesVal : "";
+        }
       }
+
+      // Planned time (H:M:S)
+      const plannedSeconds = Math.max(mins * 60.0, 0);
+      if (plannedHmsCell) {
+        plannedHmsCell.textContent = formatHMS(plannedSeconds);
+      }
+
+      // Remaining time
+      const doneSec = parseFloat(doneCell.dataset.doneSeconds || "0");
+      const remainingSec = Math.max(plannedSeconds - doneSec, 0);
 
       rm.textContent = (remainingSec / 60).toFixed(1);
       rh.textContent = formatHMS(remainingSec);
 
-      // Status Badge
-      let badge = "";
+      // Status badge
       const remMin = remainingSec / 60;
+      let badge = "";
 
       if (remainingSec <= 0) {
         badge = '<span class="badge bg-secondary">Done</span>';
@@ -380,35 +467,78 @@ document.addEventListener("DOMContentLoaded", function () {
       }
       sb.innerHTML = badge;
 
-      // Frame math
-      let exp = parseFloat(subInput.value);
-      if (!exp || exp <= 0) exp = globalExp;
-      if (!exp || exp <= 0) {
-        pf.textContent = "-";
-        df.textContent = "-";
-        rf.textContent = "-";
-        return;
+      // Frame math (for done + remaining frames display)
+      let plannedFrames = 0;
+      let doneFrames = 0;
+      let remainingFrames = 0;
+
+      if (exp > 0) {
+        plannedFrames = Math.ceil(plannedSeconds / exp);
+        doneFrames = Math.floor(doneSec / exp);
+        remainingFrames = Math.max(plannedFrames - doneFrames, 0);
       }
 
-      const plannedFrames = Math.ceil((mins * 60) / exp);
-      const doneFrames = Math.floor(doneSec / exp);
-      const remainingFrames = Math.max(plannedFrames - doneFrames, 0);
-
-      pf.textContent = plannedFrames;
-      df.textContent = doneFrames;
-      rf.textContent = remainingFrames;
+      if (df) df.textContent = doneFrames;
+      if (rf) rf.textContent = remainingFrames;
     });
   }
 
-  globalExpInput.addEventListener("input", recalcFrames);
 
-  rows.forEach(row => {
-    row.querySelectorAll("input").forEach(input => {
-      input.addEventListener("input", recalcFrames);
+  if (globalExpInput && planTable) {
+    globalExpInput.addEventListener("input", recalcFrames);
+    rows.forEach(row => {
+      row.querySelectorAll("input").forEach(input => {
+        input.addEventListener("input", recalcFrames);
+      });
     });
-  });
+    recalcFrames();
+  }
 
-  recalcFrames();
+  setupAltitudeChart();
+
+  function setupAltitudeChart() {
+    const canvas = document.getElementById("altitudeChart");
+    if (!canvas) return;
+
+    const altitudeData = {{ window_info.altitude_profile|tojson|safe }};
+    if (!altitudeData || !altitudeData.length) return;
+
+    const ctx = canvas.getContext("2d");
+    new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: altitudeData.map(p => p.time_label),
+        datasets: [{
+          label: "Altitude (°)",
+          data: altitudeData.map(p => p.alt_deg),
+          tension: 0.25,
+          borderWidth: 2,
+          pointRadius: 0
+        }]
+      },
+      options: {
+        scales: {
+          y: {
+            title: {
+              display: true,
+              text: "Altitude (°)"
+            },
+            suggestedMin: 0,
+            suggestedMax: 90
+          },
+          x: {
+            title: {
+              display: true,
+              text: "Local Time"
+            }
+          }
+        },
+        plugins: {
+          legend: { display: false }
+        }
+      }
+    });
+  }
 });
 </script>
 
