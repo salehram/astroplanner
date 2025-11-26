@@ -1,10 +1,12 @@
 from datetime import datetime, time
 import os
+import io
 import json
 
 from flask import (
     Flask, render_template, request, redirect,
-    url_for, flash, send_from_directory, jsonify
+    url_for, flash, send_from_directory, jsonify,
+    send_file
 )
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import relationship
@@ -14,6 +16,8 @@ from astro_utils import (
     compute_target_window,
     build_default_plan_json,
 )
+
+from nina_integration import load_nina_template, build_nina_sequence_from_blocks
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
@@ -373,6 +377,91 @@ def target_detail(target_id):
         window_info=window_info,
         progress_minutes=progress_minutes,
         progress_seconds=progress_seconds,
+    )
+
+
+@app.post("/target/<int:target_id>/export_nina")
+def export_nina_sequence(target_id):
+    target = Target.query.get_or_404(target_id)
+
+    # --- REUSE SAME PLAN LOGIC AS target_detail ---
+    plan = (
+        TargetPlan.query
+        .filter_by(target_id=target.id, palette_name=target.preferred_palette)
+        .order_by(TargetPlan.created_at.desc())
+        .first()
+    )
+
+    if not plan:
+        flash("No plan defined for this target.", "warning")
+        return redirect(url_for("target_detail", target_id=target.id))
+
+    plan_data = json.loads(plan.plan_json) if plan else None
+    if not plan_data or "channels" not in plan_data:
+        flash("Plan JSON is missing channels.", "warning")
+        return redirect(url_for("target_detail", target_id=target.id))
+
+    # --- REUSE SAME PROGRESS LOGIC AS target_detail ---
+    from collections import defaultdict
+    progress_minutes = defaultdict(float)
+    progress_seconds = defaultdict(float)
+
+    for s in target.sessions:
+        total_seconds = s.sub_exposure_seconds * s.sub_count
+        progress_seconds[s.channel] += total_seconds
+        progress_minutes[s.channel] += total_seconds / 60.0
+
+    # --- BUILD BLOCKS FROM REMAINING SUBS ---
+    blocks = []
+
+    for ch in plan_data["channels"]:
+        # ch is a dict: {"name": "H", "label": "...", "planned_minutes": 180, "sub_exposure_seconds": 300, ...}
+        ch_name = ch.get("name")
+        if not ch_name:
+            continue
+
+        planned_minutes = ch.get("planned_minutes", 0) or 0
+        sub_exp = ch.get("sub_exposure_seconds", 300) or 300
+
+        done_sec = progress_seconds[ch_name]
+        planned_sec = planned_minutes * 60
+        remaining_sec = max(planned_sec - done_sec, 0)
+
+        if remaining_sec <= 0:
+            continue
+
+        frames = int(round(remaining_sec / sub_exp))
+        if frames <= 0:
+            continue
+
+        blocks.append({
+            "channel": ch_name,       # "H", "O", "S", "L", "R", "G", "B", "LP"
+            "exposure_s": sub_exp,    # e.g. 300
+            "frames": frames,         # remaining frames
+        })
+
+    if not blocks:
+        flash("No remaining subs to export for this target.", "info")
+        return redirect(url_for("target_detail", target_id=target.id))
+
+    # --- LOAD TEMPLATE & BUILD NINA SEQUENCE JSON ---
+    template = load_nina_template("nina_template.json")
+    seq_json = build_nina_sequence_from_blocks(
+        template=template,
+        target_name=target.name,
+        camera_cool_temp=-10.0,
+        blocks=blocks,
+    )
+
+    # --- RETURN AS DOWNLOAD ---
+    filename = f"AstroPlanner_{target.name.replace(' ', '_')}.json"
+    buf = io.BytesIO(json.dumps(seq_json, indent=2).encode("utf-8"))
+
+    return send_file(
+        buf,
+        mimetype="application/json",
+        as_attachment=True,
+        download_name=filename,
     )
 
 

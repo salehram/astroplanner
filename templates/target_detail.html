@@ -161,6 +161,16 @@
 
             <button class="btn btn-outline-light btn-sm mt-3" type="submit">Save Plan</button>
 
+            <button class="btn btn-outline-light btn-sm mt-3" type="submit">
+              Save Plan
+            </button>
+
+            <button class="btn btn-outline-info btn-sm mt-3"
+                    formaction="{{ url_for('export_nina_sequence', target_id=target.id) }}"
+                    formmethod="post">
+              Export NINA Sequence (remaining subs)
+            </button>
+
           </form>
         {% else %}
           <p>No plan yet. Create one above.</p>
