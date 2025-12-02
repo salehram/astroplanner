@@ -1,4 +1,4 @@
-from datetime import datetime, time
+from datetime import datetime, time, timezone, timedelta
 import os
 import io
 import json
@@ -18,6 +18,7 @@ from astro_utils import (
 )
 
 from nina_integration import load_nina_template, build_nina_sequence_from_blocks
+from zoneinfo import ZoneInfo
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
@@ -62,6 +63,9 @@ class Target(db.Model):
     packup_time_local = db.Column(db.String(5), default="01:00")  # "HH:MM"
 
     final_image_filename = db.Column(db.String(255))
+
+    # NEW: when this target (i.e. this "project") was created
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     plans = relationship("TargetPlan", back_populates="target",
                          cascade="all, delete-orphan")
@@ -113,6 +117,37 @@ class ImagingSession(db.Model):
 # ---------------------------------------------------------------------------
 # HELPERS
 # ---------------------------------------------------------------------------
+
+def get_local_tz_iana():
+    tz_name = os.environ.get("OBSERVER_TZ", "Asia/Riyadh")
+    try:
+        return ZoneInfo(tz_name)
+    except:
+        return ZoneInfo("Asia/Riyadh")
+
+
+def get_local_tz():
+    """
+    Return a tzinfo for local time.
+
+    - If OBSERVER_TZ looks like a KSA-ish timezone, use fixed UTC+3.
+    - Otherwise, try zoneinfo if available.
+    - Fallback to UTC if nothing else works.
+    """
+    tz_name = os.environ.get("OBSERVER_TZ", "Asia/Riyadh")
+
+    # Treat these as "KSA time", fixed UTC+3
+    if tz_name in ("Asia/Riyadh", "KSA", "UTC+3", "+03:00"):
+        return timezone(timedelta(hours=3))
+
+    # Best effort: try zoneinfo if installed
+    try:
+        from zoneinfo import ZoneInfo
+        return ZoneInfo(tz_name)
+    except Exception:
+        # Last resort: UTC
+        return timezone.utc
+
 
 def parse_time_str(tstr, default="01:00") -> time:
     """Parse 'HH:MM' into a time object; fall back if invalid."""
@@ -223,6 +258,8 @@ def index():
             window_fit_ratio = 0.0
             tonight_completion_fraction = 0.0
 
+        created_local = (t.created_at.replace(tzinfo=timezone.utc).astimezone(get_local_tz()) if t.created_at else None)
+
         summaries.append({
             "target": t,
             "plan_data": plan_data,
@@ -237,6 +274,7 @@ def index():
             "remaining_ratio_raw": remaining_ratio,
             "window_fit_ratio_raw": window_fit_ratio,
             "tonight_completion_fraction_raw": tonight_completion_fraction,
+            "created_local": created_local,
         })
 
     # Second pass: normalize across all targets & compute a priority score
@@ -372,13 +410,17 @@ def target_detail(target_id):
     return render_template(
         "target_detail.html",
         target=target,
+        target_created_local=(
+            target.created_at.replace(tzinfo=timezone.utc).astimezone(get_local_tz())
+            if target.created_at
+            else None
+        ),
         plan=plan,
         plan_data=plan_data,
         window_info=window_info,
         progress_minutes=progress_minutes,
         progress_seconds=progress_seconds,
     )
-
 
 @app.post("/target/<int:target_id>/export_nina")
 def export_nina_sequence(target_id):

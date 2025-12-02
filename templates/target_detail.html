@@ -22,11 +22,16 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
   <div>
     <h1 class="h3 mb-0">{{ target.name }}</h1>
-    <div class="text-muted">
+    <div class="text-light small">
       {{ target.catalog_id or "No catalog ID" }} •
       {{ target.target_type or "Type N/A" }} •
       RA {{ "%.3f"|format(target.ra_hours) }}h,
       Dec {{ "%.2f"|format(target.dec_deg) }}°
+      {% if target_created_local %}
+        • <span class="text-warning">
+            Created {{ target_created_local.strftime("%Y-%m-%d %H:%M:%S") }}
+          </span>
+      {% endif %}
     </div>
   </div>
   <div class="d-flex gap-2">
@@ -158,8 +163,6 @@
 
               </table>
             </div>
-
-            <button class="btn btn-outline-light btn-sm mt-3" type="submit">Save Plan</button>
 
             <button class="btn btn-outline-light btn-sm mt-3" type="submit">
               Save Plan

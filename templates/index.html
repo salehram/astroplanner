@@ -102,9 +102,10 @@
                      class="text-light text-decoration-none">
                     {{ t.name }}
                   </a>
-                  <div class="small text-muted">
+                  <div class="small text-warning">
                     {{ t.catalog_id or "" }}
                   </div>
+                  <div class="small text-warning">Created: {{ s.created_local.strftime('%Y-%m-%d %H:%M %Z') if s.created_local else '-' }}</div>
                 </td>
                 <td>{{ t.target_type or "N/A" }}</td>
                 <td>
