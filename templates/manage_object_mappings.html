@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-8">
+    <h1>Object Type Mappings</h1>
+    <p class="text-muted">Manage automatic target type detection for catalog objects. When you create targets, they will automatically learn and improve detection.</p>
+
+    <!-- Add New Mapping -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="mb-0">Add New Mapping</h5>
+      </div>
+      <div class="card-body">
+        <form method="POST">
+          <div class="row">
+            <div class="col-md-6">
+              <label for="object_name" class="form-label">Object Name</label>
+              <input type="text" class="form-control" id="object_name" name="object_name" 
+                     placeholder="NGC 7000, M42, IC 1805" required>
+              <div class="form-text">Enter catalog designation (case insensitive)</div>
+            </div>
+            <div class="col-md-6">
+              <label for="target_type_name" class="form-label">Target Type</label>
+              <select class="form-select" id="target_type_name" name="target_type_name" required>
+                <option value="">Select target type...</option>
+                {% for tt in target_types %}
+                <option value="{{ tt.name }}">{{ tt.name.replace('_', ' ')|title }} ({{ tt.recommended_palette }})</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary mt-3">Add Mapping</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Current Mappings -->
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">Current Mappings ({{ mappings|length }} objects)</h5>
+      </div>
+      <div class="card-body">
+        {% if mappings %}
+        <div class="table-responsive">
+          <table class="table table-sm table-hover">
+            <thead>
+              <tr>
+                <th>Object Name</th>
+                <th>Target Type</th>
+                <th>Recommended Palette</th>
+                <th>Added</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for mapping in mappings %}
+              <tr>
+                <td>
+                  <code>{{ mapping.object_name }}</code>
+                </td>
+                <td>
+                  <span class="badge bg-secondary">{{ mapping.target_type.name.replace('_', ' ')|title }}</span>
+                </td>
+                <td>
+                  <span class="badge bg-info">{{ mapping.target_type.recommended_palette }}</span>
+                </td>
+                <td>
+                  <small class="text-muted">{{ mapping.created_at.strftime('%Y-%m-%d') if mapping.created_at else '-' }}</small>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <p class="text-muted">No object mappings yet. Create some targets to automatically build this database!</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">How It Works</h5>
+      </div>
+      <div class="card-body">
+        <p><strong>Automatic Learning:</strong></p>
+        <ul class="small">
+          <li>When you create a target and select a type, it's automatically added here</li>
+          <li>Next time someone enters the same object, the type is auto-detected</li>
+          <li>The app gets smarter over time</li>
+        </ul>
+
+        <hr>
+
+        <p><strong>Target Types Available:</strong></p>
+        {% for tt in target_types %}
+        <div class="mb-3 border-start border-3 border-secondary ps-3">
+          <strong class="text-capitalize">{{ tt.name.replace('_', ' ') }}</strong>
+          <span class="badge bg-info ms-2">{{ tt.recommended_palette }}</span>
+          <br>
+          <small class="text-info">
+            <strong>What it is:</strong> 
+            {% if tt.name == 'emission' %}
+              Hot gas clouds that emit light when excited by nearby stars, typically glowing red (H-alpha) and blue-green (OIII).
+            {% elif tt.name == 'diffuse' %}
+              Large, faint clouds of gas and dust with low surface brightness, often dark nebulae with surrounding emission.
+            {% elif tt.name == 'reflection' %}
+              Dust clouds that reflect light from nearby stars, typically appearing blue due to light scattering.
+            {% elif tt.name == 'galaxy' %}
+              Massive collections of billions of stars, gas, and dust held together by gravity, located outside our Milky Way.
+            {% elif tt.name == 'cluster' %}
+              Groups of stars bound by gravity - either open clusters (young, hot stars) or globular clusters (old, densely packed stars).
+            {% elif tt.name == 'planetary' %}
+              Shells of ionized gas ejected by dying stars, despite the name they have nothing to do with planets.
+            {% elif tt.name == 'supernova_remnant' %}
+              Expanding shock waves and heated gas from exploded stars, often showing complex filamentary structure.
+            {% elif tt.name == 'other' %}
+              Objects that don't fit standard deep-sky categories, including solar system objects and unique astronomical phenomena.
+            {% endif %}
+          </small>
+          <br>
+          <small class="text-muted">{{ tt.description }}</small>
+          <br>
+          <small class="text-warning">
+            <strong>Examples:</strong> 
+            {% if tt.name == 'emission' %}
+              NGC 7000 (North America), IC 434 (Horsehead), NGC 2237 (Rosette)
+            {% elif tt.name == 'diffuse' %}
+              Barnard 33 (Horsehead Dark), IC 2177 (Seagull), LBN 777 (Baby Eagle)
+            {% elif tt.name == 'reflection' %}
+              NGC 7023 (Iris), IC 2118 (Witch Head), NGC 1977 (Running Man)
+            {% elif tt.name == 'galaxy' %}
+              M31 (Andromeda), M33 (Triangulum), NGC 4565 (Needle)
+            {% elif tt.name == 'cluster' %}
+              M45 (Pleiades), M44 (Beehive), NGC 869/884 (Double Cluster)
+            {% elif tt.name == 'planetary' %}
+              NGC 7293 (Helix), NGC 6720 (Ring), M57 (Ring), NGC 6853 (Dumbbell)
+            {% elif tt.name == 'supernova_remnant' %}
+              NGC 6960 (Veil West), NGC 6992 (Veil East), IC 443 (Jellyfish)
+            {% elif tt.name == 'other' %}
+              Comets, asteroids, or unique objects not fitting above categories
+            {% endif %}
+          </small>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

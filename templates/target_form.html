@@ -1,5 +1,21 @@
 {% extends "base.html" %}
 {% block content %}
+
+<style>
+  #palette_recommendation {
+    min-height: 2rem;
+    transition: all 0.3s ease;
+  }
+  
+  .palette-suggestion {
+    background-color: rgba(25, 135, 84, 0.1);
+    border-left: 3px solid #198754;
+    padding: 0.5rem;
+    margin-top: 0.5rem;
+    border-radius: 0.25rem;
+  }
+</style>
+
 <h1 class="h4 mb-3">
   {% if target %}Edit Target{% else %}New Target{% endif %}
 </h1>
@@ -43,34 +59,40 @@
       <div class="mb-3">
         <label class="form-label">Dec (decimal degrees)</label>
         <input class="form-control" id="dec_deg" name="dec_deg"
-               type="number" step="0.001"
+               type="number" step="0.0001"
                value="{{ (target and target.dec_deg) or '' }}" required>
+        <div class="form-text">Example: +41.2687 for +41° 16' 7".</div>
       </div>
 
       <!-- TARGET TYPE -->
       <div class="mb-3">
         <label class="form-label">Target Type</label>
         {% set ttype = target.target_type if target else '' %}
-        <select class="form-select" name="target_type">
-          {% for v in ["emission", "diffuse", "reflection", "galaxy", "cluster", "other"] %}
+        <select class="form-select" name="target_type" id="target_type">
+          <option value="">Select target type...</option>
+          {% for v in ["emission", "diffuse", "reflection", "galaxy", "cluster", "planetary", "supernova_remnant", "other"] %}
           <option value="{{ v }}" {% if ttype==v %}selected{% endif %}>
-            {{ v|capitalize }}
+            {{ v.replace('_', ' ')|title }}
           </option>
           {% endfor %}
         </select>
+        <div class="form-text">Palette will be automatically recommended based on target type.</div>
       </div>
 
       <!-- PALETTE -->
       <div class="mb-3">
         <label class="form-label">Preferred Palette</label>
         {% set pal = target.preferred_palette if target else 'SHO' %}
-        <select class="form-select" name="preferred_palette">
+        <select class="form-select" name="preferred_palette" id="preferred_palette">
           {% for v in ["SHO", "HOO", "LRGB", "LRGBNB"] %}
           <option value="{{ v }}" {% if pal==v %}selected{% endif %}>
             {{ v }}
           </option>
           {% endfor %}
         </select>
+        <div class="form-text">
+          <span id="palette_recommendation"></span>
+        </div>
       </div>
 
       <!-- PACKUP TIME -->
@@ -111,7 +133,65 @@
 <!-- JAVASCRIPT FOR AUTO RESOLUTION -->
 <script>
 document.addEventListener("DOMContentLoaded", function () {
+  // Automatic palette recommendation based on target type
+  const targetTypeSelect = document.getElementById("target_type");
+  const paletteSelect = document.getElementById("preferred_palette");
+  const paletteRecommendation = document.getElementById("palette_recommendation");
 
+  const paletteMap = {
+    "emission": "SHO",
+    "diffuse": "HOO", 
+    "reflection": "LRGB",
+    "galaxy": "LRGB",
+    "cluster": "LRGB",
+    "planetary": "SHO",
+    "supernova_remnant": "SHO",
+    "other": "SHO"
+  };
+
+  const paletteReasons = {
+    "emission": "Emission nebulae work excellently with narrowband SHO filters",
+    "diffuse": "Diffuse nebulae often benefit from HOO for enhanced contrast", 
+    "reflection": "Reflection nebulae show great detail with broadband LRGB",
+    "galaxy": "Galaxies typically use broadband LRGB for star colors and detail",
+    "cluster": "Star clusters showcase natural colors best with LRGB",
+    "planetary": "Planetary nebulae reveal structure well with narrowband SHO",
+    "supernova_remnant": "Supernova remnants often have strong emission lines, perfect for SHO",
+    "other": "SHO is a versatile starting point for most deep sky targets"
+  };
+
+  function updatePaletteRecommendation() {
+    const targetType = targetTypeSelect.value;
+    if (targetType && paletteMap[targetType]) {
+      const recommendedPalette = paletteMap[targetType];
+      const reason = paletteReasons[targetType];
+      
+      // Update the palette selection
+      paletteSelect.value = recommendedPalette;
+      
+      // Show recommendation text
+      paletteRecommendation.innerHTML = `
+        <div class="palette-suggestion">
+          <span class="text-success fw-bold">
+            💡 Recommended: ${recommendedPalette}
+          </span><br>
+          <small class="text-muted">${reason}</small>
+        </div>
+      `;
+    } else {
+      paletteRecommendation.innerHTML = "";
+    }
+  }
+
+  // Update recommendation when target type changes
+  targetTypeSelect.addEventListener("change", updatePaletteRecommendation);
+  
+  // Set initial recommendation if editing existing target
+  if (targetTypeSelect.value) {
+    updatePaletteRecommendation();
+  }
+
+  // Object name resolution  
   const btn = document.getElementById("btn-resolve");
   if (!btn) return;
 
@@ -141,6 +221,29 @@ document.addEventListener("DOMContentLoaded", function () {
         }
         if (typeof data.dec_deg === "number") {
           decInput.value = data.dec_deg.toFixed(4);
+        }
+        
+        // Auto-select target type if detected
+        if (data.suggested_type && targetTypeSelect) {
+          targetTypeSelect.value = data.suggested_type;
+          // Trigger palette recommendation update
+          updatePaletteRecommendation();
+          
+          // Show feedback about auto-detection
+          const typeRecommendation = document.createElement("div");
+          typeRecommendation.className = "alert alert-info alert-dismissible fade show mt-2";
+          typeRecommendation.innerHTML = `
+            <strong>Auto-detected target type:</strong> ${data.suggested_type.replace('_', ' ').replace(/\\b\\w/g, l => l.toUpperCase())}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          `;
+          targetTypeSelect.parentNode.appendChild(typeRecommendation);
+          
+          // Remove the notification after 5 seconds
+          setTimeout(() => {
+            if (typeRecommendation.parentNode) {
+              typeRecommendation.remove();
+            }
+          }, 5000);
         }
       }
     } catch (err) {

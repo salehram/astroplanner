@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-8">
+    <h1>{{ target.name }} - Settings</h1>
+    <p class="text-muted">Configure settings specific to this target. Leave blank to use global defaults.</p>
+
+    <form method="POST">
+      <div class="card mb-4">
+        <div class="card-header">
+          <h5 class="mb-0">Target-Specific Overrides</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <label for="override_packup_time" class="form-label">Pack-up Time Override</label>
+              <input type="time" class="form-control" id="override_packup_time" name="override_packup_time" 
+                     value="{{ target.override_packup_time or '' }}" placeholder="Use global default">
+              <div class="form-text">
+                Global default: {{ global_config.default_packup_time }}<br>
+                Leave empty to use global default
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label for="override_min_altitude" class="form-label">Minimum Altitude Override (degrees)</label>
+              <input type="number" class="form-control" id="override_min_altitude" name="override_min_altitude" 
+                     step="0.1" min="0" max="90" value="{{ target.override_min_altitude or '' }}" placeholder="Use global default">
+              <div class="form-text">
+                Global default: {{ global_config.default_min_altitude }}°<br>
+                Leave empty to use global default
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Save Target Settings</button>
+        <a href="{{ url_for('target_detail', target_id=target.id) }}" class="btn btn-outline-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">Current Effective Settings</h5>
+      </div>
+      <div class="card-body">
+        <p><strong>Pack-up Time:</strong><br>
+        {{ target.override_packup_time or global_config.default_packup_time }}
+        {% if target.override_packup_time %}
+          <span class="badge bg-warning ms-2">Target Override</span>
+        {% else %}
+          <span class="badge bg-secondary ms-2">Global Default</span>
+        {% endif %}
+        </p>
+        
+        <p><strong>Minimum Altitude:</strong><br>
+        {{ target.override_min_altitude or global_config.default_min_altitude }}°
+        {% if target.override_min_altitude is not none %}
+          <span class="badge bg-warning ms-2">Target Override</span>
+        {% else %}
+          <span class="badge bg-secondary ms-2">Global Default</span>
+        {% endif %}
+        </p>
+
+        <hr>
+        <p class="small text-muted">
+          These settings affect window calculations and altitude charts for this specific target. 
+          Global settings can be changed from the main settings page.
+        </p>
+        
+        <a href="{{ url_for('global_settings') }}" class="btn btn-outline-info btn-sm">
+          Edit Global Settings
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

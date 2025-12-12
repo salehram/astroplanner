@@ -44,13 +44,69 @@ app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50 MB
 # MODELS
 # ---------------------------------------------------------------------------
 
+class GlobalConfig(db.Model):
+    __tablename__ = "global_config"
+    
+    id = db.Column(db.Integer, primary_key=True)
+    
+    # Observer location
+    observer_lat = db.Column(db.Float, default=24.7136)  # Riyadh
+    observer_lon = db.Column(db.Float, default=46.6753)
+    observer_elev_m = db.Column(db.Float, default=600)
+    
+    # Default observation settings
+    default_packup_time = db.Column(db.String(5), default="01:00")
+    default_min_altitude = db.Column(db.Float, default=30.0)
+    
+    # Timezone
+    timezone_name = db.Column(db.String(64), default="Asia/Riyadh")
+    
+    # Tracking
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f"<GlobalConfig lat={self.observer_lat} lon={self.observer_lon}>"
+
+
+class TargetType(db.Model):
+    __tablename__ = "target_types"
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64), unique=True, nullable=False)  # emission, galaxy, etc.
+    recommended_palette = db.Column(db.String(16), nullable=False)  # SHO, LRGB, etc.
+    description = db.Column(db.Text)  # Why this palette works
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationship
+    object_mappings = relationship("ObjectMapping", back_populates="target_type", cascade="all, delete-orphan")
+    
+    def __repr__(self):
+        return f"<TargetType {self.name} -> {self.recommended_palette}>"
+
+
+class ObjectMapping(db.Model):
+    __tablename__ = "object_mappings"
+    
+    id = db.Column(db.Integer, primary_key=True)
+    object_name = db.Column(db.String(128), unique=True, nullable=False)  # "NGC 6960", "M31", etc.
+    target_type_id = db.Column(db.Integer, db.ForeignKey("target_types.id"), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationship
+    target_type = relationship("TargetType", back_populates="object_mappings")
+    
+    def __repr__(self):
+        return f"<ObjectMapping {self.object_name} -> {self.target_type.name if self.target_type else 'None'}>"
+
+
 class Target(db.Model):
     __tablename__ = "targets"
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), nullable=False)
     catalog_id = db.Column(db.String(64))
-    target_type = db.Column(db.String(64))  # emission, reflection, galaxy, etc.
+    target_type = db.Column(db.String(64))  # Keep for backward compatibility
+    target_type_id = db.Column(db.Integer, db.ForeignKey("target_types.id"))  # New FK reference
 
     # RA in decimal hours, Dec in decimal degrees
     ra_hours = db.Column(db.Float, nullable=False)
@@ -61,6 +117,10 @@ class Target(db.Model):
 
     preferred_palette = db.Column(db.String(64), default="SHO")
     packup_time_local = db.Column(db.String(5), default="01:00")  # "HH:MM"
+    
+    # Configuration overrides (NULL = use global config)
+    override_packup_time = db.Column(db.String(5))  # NULL = use global default
+    override_min_altitude = db.Column(db.Float)     # NULL = use global default
 
     final_image_filename = db.Column(db.String(255))
 
@@ -159,6 +219,134 @@ def parse_time_str(tstr, default="01:00") -> time:
         return time(hour=dh, minute=dm)
 
 
+def get_global_config():
+    """Get global configuration, creating default if none exists."""
+    config = GlobalConfig.query.first()
+    if not config:
+        config = GlobalConfig()
+        db.session.add(config)
+        db.session.commit()
+    return config
+
+
+def get_effective_packup_time(target):
+    """Get effective pack-up time for target (override or global default)."""
+    if target.override_packup_time:
+        return target.override_packup_time
+    return get_global_config().default_packup_time
+
+
+def get_effective_min_altitude(target):
+    """Get effective minimum altitude for target (override or global default)."""
+    if target.override_min_altitude is not None:
+        return target.override_min_altitude
+    return get_global_config().default_min_altitude
+
+
+def get_observer_location():
+    """Get observer location from global config."""
+    config = get_global_config()
+    return config.observer_lat, config.observer_lon, config.observer_elev_m
+
+
+def get_recommended_palette(target_type):
+    """Get recommended palette based on target type."""
+    # Try to get from TargetType table first
+    target_type_obj = TargetType.query.filter_by(name=target_type).first()
+    if target_type_obj:
+        return target_type_obj.recommended_palette
+    
+    # Fallback to hardcoded mapping
+    palette_map = {
+        "emission": "SHO",
+        "diffuse": "HOO", 
+        "reflection": "LRGB",
+        "galaxy": "LRGB",
+        "cluster": "LRGB",
+        "planetary": "SHO",
+        "supernova_remnant": "SHO",
+        "other": "SHO"
+    }
+    return palette_map.get(target_type, "SHO")
+
+
+def detect_target_type(catalog_name):
+    """Detect target type using ObjectMapping database."""
+    if not catalog_name:
+        return "other"
+    
+    # Clean up the catalog name for matching
+    clean_name = catalog_name.strip().upper()
+    
+    # Check ObjectMapping table first
+    mapping = ObjectMapping.query.filter(
+        db.func.upper(ObjectMapping.object_name) == clean_name
+    ).first()
+    
+    if mapping and mapping.target_type:
+        return mapping.target_type.name
+    
+    # Fallback to old hardcoded logic for backward compatibility
+    return detect_target_type_fallback(catalog_name)
+
+
+def detect_target_type_fallback(catalog_name):
+    """Fallback detection using hardcoded patterns (legacy)."""
+    name_lower = catalog_name.lower().strip()
+    
+    # Keep existing hardcoded logic as fallback
+    if any(x in name_lower for x in ['ngc 6960', 'ngc 6992', 'ngc 6979', 'ngc 6974']):
+        return "supernova_remnant"
+    elif any(x in name_lower for x in ['ic 1805', 'ic 1848', 'ngc 7635', 'ic 1396']):
+        return "emission"
+    elif any(x in name_lower for x in ['ngc 7023', 'ic 2118', 'ngc 1977']):
+        return "reflection"
+    elif any(x in name_lower for x in ['m31', 'm33', 'm81', 'm82', 'm101', 'ngc 891', 'ngc 4565']):
+        return "galaxy"
+    elif any(x in name_lower for x in ['m45', 'm44', 'ngc 869', 'ngc 884']):
+        return "cluster"
+    elif any(x in name_lower for x in ['ngc 7293', 'ngc 6720', 'ngc 6853', 'ngc 3132']):
+        return "planetary"
+    elif any(x in name_lower for x in ['sh2-', 'sh 2-', 'sharpless']):
+        return "emission"
+    
+    return "other"
+
+
+def add_object_mapping(catalog_name, target_type_name):
+    """Add a new object mapping to the database."""
+    if not catalog_name or not target_type_name:
+        return False
+    
+    # Check if mapping already exists
+    clean_name = catalog_name.strip().upper()
+    existing = ObjectMapping.query.filter(
+        db.func.upper(ObjectMapping.object_name) == clean_name
+    ).first()
+    
+    if existing:
+        return False  # Already exists
+    
+    # Find target type
+    target_type_obj = TargetType.query.filter_by(name=target_type_name).first()
+    if not target_type_obj:
+        return False  # Invalid target type
+    
+    # Create new mapping
+    mapping = ObjectMapping(
+        object_name=catalog_name.strip(),
+        target_type_id=target_type_obj.id
+    )
+    
+    try:
+        db.session.add(mapping)
+        db.session.commit()
+        return True
+    except Exception:
+        db.session.rollback()
+        return False
+
+
 # ---------------------------------------------------------------------------
 # ROUTES
 # ---------------------------------------------------------------------------
@@ -169,10 +357,8 @@ def index():
 
     targets = Target.query.order_by(Target.name).all()
 
-    # Observer location from env (defaults to Riyadh)
-    lat = float(os.environ.get("OBSERVER_LAT", "24.7136"))
-    lon = float(os.environ.get("OBSERVER_LON", "46.6753"))
-    elev = float(os.environ.get("OBSERVER_ELEV_M", "600"))
+    # Observer location from global config
+    lat, lon, elev = get_observer_location()
 
     summaries = []
 
@@ -224,7 +410,7 @@ def index():
                 suggested_label = label
 
         # Tonight's window for this target
-        packup_time = parse_time_str(t.packup_time_local)
+        packup_time = parse_time_str(get_effective_packup_time(t))
         window_info = compute_target_window(
             ra_hours=t.ra_hours,
             dec_deg=t.dec_deg,
@@ -232,6 +418,7 @@ def index():
             longitude_deg=lon,
             elevation_m=elev,
             packup_time_local=packup_time,
+            min_altitude_deg=get_effective_min_altitude(t),
         )
 
         if window_info.get("deps_available"):
@@ -334,7 +521,12 @@ def new_target():
         target_type = request.form.get("target_type") or None
         ra_hours = float(request.form.get("ra_hours"))
         dec_deg = float(request.form.get("dec_deg"))
-        preferred_palette = request.form.get("preferred_palette") or "SHO"
+        
+        # Use submitted palette or get recommendation based on target type
+        preferred_palette = request.form.get("preferred_palette")
+        if not preferred_palette or preferred_palette == "auto":
+            preferred_palette = get_recommended_palette(target_type)
+        
         packup_time_local = request.form.get("packup_time_local") or "01:00"
 
         target = Target(
@@ -348,6 +540,10 @@ def new_target():
         )
         db.session.add(target)
         db.session.commit()
+        
+        # Create object mapping for future auto-detection
+        if catalog_id and target_type and target_type != "other":
+            add_object_mapping(catalog_id, target_type)
 
         # Initial plan guess
         plan_json = build_default_plan_json(
@@ -382,11 +578,9 @@ def target_detail(target_id):
     )
     plan_data = json.loads(plan.plan_json) if plan else None
 
-    # Observer location from env (defaults to Riyadh)
-    lat = float(os.environ.get("OBSERVER_LAT", "24.7136"))
-    lon = float(os.environ.get("OBSERVER_LON", "46.6753"))
-    elev = float(os.environ.get("OBSERVER_ELEV_M", "600"))
-    packup_time = parse_time_str(target.packup_time_local)
+    # Observer location and settings from config
+    lat, lon, elev = get_observer_location()
+    packup_time = parse_time_str(get_effective_packup_time(target))
 
     window_info = compute_target_window(
         ra_hours=target.ra_hours,
@@ -395,6 +589,7 @@ def target_detail(target_id):
         longitude_deg=lon,
         elevation_m=elev,
         packup_time_local=packup_time,
+        min_altitude_deg=get_effective_min_altitude(target),
     )
 
     # Progress: accumulate minutes and seconds per channel
@@ -761,12 +956,121 @@ def api_resolve():
         # Unexpected errors
         return jsonify({"error": f"Resolution failed: {e}"}), 500
 
+    # Attempt to determine target type from catalog designation
+    detected_type = detect_target_type(name)
+
     return jsonify({
         "name": name,
         "ra_hours": ra_hours,
         "dec_deg": dec_deg,
+        "suggested_type": detected_type
     })
 
+
+@app.route("/api/palette-recommendation", methods=["GET"])
+def api_palette_recommendation():
+    """Get recommended palette for a target type."""
+    target_type = request.args.get("target_type", "").strip().lower()
+    if not target_type:
+        return jsonify({"error": "Missing 'target_type' query parameter."}), 400
+    
+    recommended_palette = get_recommended_palette(target_type)
+    
+    # Provide reasoning for the recommendation
+    reasons = {
+        "emission": "Emission nebulae work excellently with narrowband SHO filters",
+        "diffuse": "Diffuse nebulae often benefit from HOO for enhanced contrast", 
+        "reflection": "Reflection nebulae show great detail with broadband LRGB",
+        "galaxy": "Galaxies typically use broadband LRGB for star colors and detail",
+        "cluster": "Star clusters showcase natural colors best with LRGB",
+        "planetary": "Planetary nebulae reveal structure well with narrowband SHO",
+        "supernova_remnant": "Supernova remnants often have strong emission lines, perfect for SHO",
+        "other": "SHO is a versatile starting point for most deep sky targets"
+    }
+    
+    return jsonify({
+        "target_type": target_type,
+        "recommended_palette": recommended_palette,
+        "reason": reasons.get(target_type, "Default recommendation")
+    })
+
+
+@app.route("/settings", methods=["GET", "POST"])
+def global_settings():
+    """Manage global configuration settings."""
+    config = get_global_config()
+    
+    if request.method == "POST":
+        # Update global configuration
+        config.observer_lat = float(request.form.get("observer_lat", config.observer_lat))
+        config.observer_lon = float(request.form.get("observer_lon", config.observer_lon))
+        config.observer_elev_m = float(request.form.get("observer_elev_m", config.observer_elev_m))
+        config.default_packup_time = request.form.get("default_packup_time", config.default_packup_time)
+        config.default_min_altitude = float(request.form.get("default_min_altitude", config.default_min_altitude))
+        config.timezone_name = request.form.get("timezone_name", config.timezone_name)
+        config.updated_at = datetime.utcnow()
+        
+        try:
+            db.session.commit()
+            flash("Global settings updated successfully!", "success")
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error updating settings: {e}", "error")
+            
+        return redirect(url_for("global_settings"))
+    
+    return render_template("settings.html", config=config)
+
+
+@app.route("/target/<int:target_id>/settings", methods=["GET", "POST"])
+def target_settings(target_id):
+    """Manage per-target configuration overrides."""
+    target = Target.query.get_or_404(target_id)
+    global_config = get_global_config()
+    
+    if request.method == "POST":
+        # Update target overrides
+        override_packup = request.form.get("override_packup_time", "").strip()
+        override_altitude = request.form.get("override_min_altitude", "").strip()
+        
+        target.override_packup_time = override_packup if override_packup else None
+        target.override_min_altitude = float(override_altitude) if override_altitude else None
+        
+        try:
+            db.session.commit()
+            flash("Target settings updated successfully!", "success")
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error updating target settings: {e}", "error")
+            
+        return redirect(url_for("target_detail", target_id=target_id))
+    
+    return render_template("target_settings.html", target=target, global_config=global_config)
+
+
+@app.route("/manage-object-mappings", methods=["GET", "POST"])
+def manage_object_mappings():
+    """Manage object type mappings."""
+    if request.method == "POST":
+        object_name = request.form.get("object_name", "").strip()
+        target_type_name = request.form.get("target_type_name")
+        
+        if object_name and target_type_name:
+            success = add_object_mapping(object_name, target_type_name)
+            if success:
+                flash(f"Added mapping: {object_name} → {target_type_name}", "success")
+            else:
+                flash(f"Failed to add mapping (may already exist)", "error")
+        else:
+            flash("Please provide both object name and target type", "error")
+        
+        return redirect(url_for("manage_object_mappings"))
+    
+    # GET - show mappings
+    mappings = ObjectMapping.query.join(TargetType).order_by(ObjectMapping.object_name).all()
+    target_types = TargetType.query.order_by(TargetType.name).all()
+    
+    return render_template("manage_object_mappings.html", mappings=mappings, target_types=target_types)
 
 
 # ---------------------------------------------------------------------------
@@ -777,6 +1081,38 @@ def api_resolve():
 def init_db():
     """Initialize the database tables."""
     db.create_all()
+    
+    # Create default global config if none exists
+    if not GlobalConfig.query.first():
+        config = GlobalConfig()
+        db.session.add(config)
+        db.session.commit()
+        print("Created default global configuration.")
+    
+    # Create default target types if none exist
+    if not TargetType.query.first():
+        default_types = [
+            ("emission", "SHO", "Emission nebulae work excellently with narrowband SHO filters"),
+            ("diffuse", "HOO", "Diffuse nebulae often benefit from HOO for enhanced contrast"),
+            ("reflection", "LRGB", "Reflection nebulae show great detail with broadband LRGB"),
+            ("galaxy", "LRGB", "Galaxies typically use broadband LRGB for star colors and detail"),
+            ("cluster", "LRGB", "Star clusters showcase natural colors best with LRGB"),
+            ("planetary", "SHO", "Planetary nebulae reveal structure well with narrowband SHO"),
+            ("supernova_remnant", "SHO", "Supernova remnants often have strong emission lines, perfect for SHO"),
+            ("other", "SHO", "SHO is a versatile starting point for most deep sky targets")
+        ]
+        
+        for name, palette, desc in default_types:
+            target_type = TargetType(
+                name=name,
+                recommended_palette=palette,
+                description=desc
+            )
+            db.session.add(target_type)
+        
+        db.session.commit()
+        print("Created default target types.")
+    
     print("Database initialized.")
 
 

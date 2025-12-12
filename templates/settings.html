@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-8">
+    <h1>Global Settings</h1>
+    <p class="text-muted">Configure global defaults for all targets. Individual targets can override these settings.</p>
+
+    <form method="POST">
+      <!-- Observer Location -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h5 class="mb-0">Observer Location</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-4">
+              <label for="observer_lat" class="form-label">Latitude (degrees)</label>
+              <input type="number" class="form-control" id="observer_lat" name="observer_lat" 
+                     step="0.0001" value="{{ config.observer_lat }}" required>
+              <div class="form-text">Positive = North, Negative = South</div>
+            </div>
+            <div class="col-md-4">
+              <label for="observer_lon" class="form-label">Longitude (degrees)</label>
+              <input type="number" class="form-control" id="observer_lon" name="observer_lon" 
+                     step="0.0001" value="{{ config.observer_lon }}" required>
+              <div class="form-text">Positive = East, Negative = West</div>
+            </div>
+            <div class="col-md-4">
+              <label for="observer_elev_m" class="form-label">Elevation (meters)</label>
+              <input type="number" class="form-control" id="observer_elev_m" name="observer_elev_m" 
+                     step="1" value="{{ config.observer_elev_m }}" required>
+              <div class="form-text">Above sea level</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Observing Defaults -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h5 class="mb-0">Default Observing Settings</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <label for="default_packup_time" class="form-label">Default Pack-up Time</label>
+              <input type="time" class="form-control" id="default_packup_time" name="default_packup_time" 
+                     value="{{ config.default_packup_time }}" required>
+              <div class="form-text">Time before sunrise to finish observing</div>
+            </div>
+            <div class="col-md-6">
+              <label for="default_min_altitude" class="form-label">Default Minimum Altitude (degrees)</label>
+              <input type="number" class="form-control" id="default_min_altitude" name="default_min_altitude" 
+                     step="0.1" min="0" max="90" value="{{ config.default_min_altitude }}" required>
+              <div class="form-text">Minimum target altitude for observations</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Timezone -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h5 class="mb-0">Timezone</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <label for="timezone_name" class="form-label">Timezone</label>
+              <select class="form-select" id="timezone_name" name="timezone_name" required>
+                <option value="Asia/Riyadh" {{ 'selected' if config.timezone_name == 'Asia/Riyadh' else '' }}>Asia/Riyadh (UTC+3)</option>
+                <option value="UTC" {{ 'selected' if config.timezone_name == 'UTC' else '' }}>UTC</option>
+                <option value="America/New_York" {{ 'selected' if config.timezone_name == 'America/New_York' else '' }}>America/New_York (Eastern)</option>
+                <option value="America/Los_Angeles" {{ 'selected' if config.timezone_name == 'America/Los_Angeles' else '' }}>America/Los_Angeles (Pacific)</option>
+                <option value="Europe/London" {{ 'selected' if config.timezone_name == 'Europe/London' else '' }}>Europe/London</option>
+                <option value="Europe/Berlin" {{ 'selected' if config.timezone_name == 'Europe/Berlin' else '' }}>Europe/Berlin</option>
+                <option value="Asia/Tokyo" {{ 'selected' if config.timezone_name == 'Asia/Tokyo' else '' }}>Asia/Tokyo</option>
+                <option value="Australia/Sydney" {{ 'selected' if config.timezone_name == 'Australia/Sydney' else '' }}>Australia/Sydney</option>
+              </select>
+              <div class="form-text">Used for displaying times in local timezone</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Save Settings</button>
+        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">Configuration Info</h5>
+      </div>
+      <div class="card-body">
+        <p><strong>Current Location:</strong><br>
+        {{ "%.4f"|format(config.observer_lat) }}°, {{ "%.4f"|format(config.observer_lon) }}°<br>
+        {{ config.observer_elev_m }}m elevation</p>
+        
+        <p><strong>Last Updated:</strong><br>
+        {{ config.updated_at.strftime('%Y-%m-%d %H:%M UTC') if config.updated_at else 'Never' }}</p>
+        
+        <hr>
+        <p class="small text-muted">
+          These settings affect window calculations, altitude charts, and NINA exports for all targets. 
+          Individual targets can override the pack-up time and minimum altitude settings.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
