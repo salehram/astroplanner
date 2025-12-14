@@ -21,10 +21,22 @@ from nina_integration import load_nina_template, build_nina_sequence_from_blocks
 from time_utils import register_time_filters, format_hms, parse_hms, hms_to_minutes
 from zoneinfo import ZoneInfo
 
+# Application version
+APP_VERSION = "1.0.0"
+APP_NAME = "AstroPlanner"
+
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-key")
+
+# Make version info available to all templates
+@app.context_processor
+def inject_version():
+    return {
+        'app_version': APP_VERSION,
+        'app_name': APP_NAME
+    }
 
 # --- Database config (SQLite by default, override with DATABASE_URL) ---------
 db_url = os.environ.get("DATABASE_URL") or \

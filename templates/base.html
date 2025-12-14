@@ -12,7 +12,7 @@
 <body class="bg-dark text-light">
 <nav class="navbar navbar-expand-lg navbar-dark bg-black mb-4">
   <div class="container-fluid">
-    <a class="navbar-brand" href="{{ url_for('index') }}">Astro Planner</a>
+    <a class="navbar-brand" href="{{ url_for('index') }}">{{ app_name }}</a>
     <div class="navbar-nav ms-auto">
       <a class="nav-link" href="{{ url_for('palette_list') }}">Palettes</a>
       <a class="nav-link" href="{{ url_for('manage_object_mappings') }}">Object Mappings</a>
@@ -38,6 +38,17 @@
 
   {% block content %}{% endblock %}
 </div>
+
+<!-- Footer with version info -->
+<footer class="bg-black text-center py-3 mt-5">
+  <div class="container">
+    <small class="text-muted">
+      {{ app_name }} v{{ app_version }} • 
+      <span title="Professional astrophotography session planning tool">🌌 Astrophotography Planning Made Easy
+      </span>
+    </small>
+  </div>
+</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
