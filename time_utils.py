@@ -93,7 +93,8 @@ def hms_to_minutes(hms_string):
 # Template filter registration (for Jinja2)
 def register_time_filters(app):
     """Register time formatting filters with Flask app."""
-    app.jinja_env.filters['hms'] = format_hms
+    app.jinja_env.filters['format_hms'] = format_hms  # expects seconds
+    app.jinja_env.filters['format_hms_from_minutes'] = minutes_to_hms  # expects minutes
     app.jinja_env.filters['hms_short'] = format_hms_short
     app.jinja_env.filters['minutes_to_hms'] = minutes_to_hms
 
