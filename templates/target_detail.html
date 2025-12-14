@@ -88,7 +88,7 @@
                 <input id="total_planned_hms" class="form-control form-control-sm mt-1"
                        type="text" placeholder="H:M:S format (e.g. 6:00:00)"
                        title="Enter time in H:M:S format">
-                <small class="text-muted">{{ (plan_data.total_planned_minutes * 60) | hms }}</small>
+                <small class="text-muted">{{ (plan_data.total_planned_minutes * 60) | format_hms }}</small>
               </div>
 
               <div class="col-md-4 mb-2">
