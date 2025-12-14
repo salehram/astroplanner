@@ -632,20 +632,77 @@ document.addEventListener("DOMContentLoaded", function () {
     const altitudeData = {{ window_info.altitude_profile|tojson|safe }};
     if (!altitudeData || !altitudeData.length) return;
 
+    const minAltitude = {{ window_info.min_altitude_deg|tojson|safe }};
+    const startTime = "{{ window_info.start_time_local }}";
+    const endTime = "{{ window_info.end_time_local }}";
+
     const ctx = canvas.getContext("2d");
+    
+    // Create altitude threshold line data (horizontal line at min altitude)
+    const thresholdData = altitudeData.map(() => minAltitude);
+    
+    // Create background color array for shading the valid window
+    const backgroundColors = altitudeData.map(point => {
+      const timeLabel = point.time_label;
+      // Check if this time point is within the imaging window
+      const isWithinWindow = timeLabel >= startTime.slice(0, 5) && timeLabel <= endTime.slice(0, 5);
+      return isWithinWindow ? 'rgba(76, 175, 80, 0.1)' : 'rgba(158, 158, 158, 0.1)';
+    });
+
     new Chart(ctx, {
       type: "line",
       data: {
         labels: altitudeData.map(p => p.time_label),
-        datasets: [{
-          label: "Altitude (°)",
-          data: altitudeData.map(p => p.alt_deg),
-          tension: 0.25,
-          borderWidth: 2,
-          pointRadius: 0
-        }]
+        datasets: [
+          {
+            label: "Altitude (°)",
+            data: altitudeData.map(p => p.alt_deg),
+            tension: 0.25,
+            borderWidth: 3,
+            borderColor: 'rgb(54, 162, 235)',
+            backgroundColor: 'rgba(54, 162, 235, 0.1)',
+            pointRadius: 0,
+            fill: false
+          },
+          {
+            label: `Min Altitude (${minAltitude}°)`,
+            data: thresholdData,
+            borderColor: 'rgba(244, 67, 54, 0.8)',
+            backgroundColor: 'rgba(244, 67, 54, 0.1)',
+            borderWidth: 2,
+            borderDash: [5, 5],
+            pointRadius: 0,
+            fill: false
+          }
+        ]
       },
       options: {
+        responsive: true,
+        interaction: {
+          intersect: false,
+          mode: 'index'
+        },
+        plugins: {
+          legend: { 
+            display: true,
+            position: 'top',
+            labels: {
+              boxWidth: 12,
+              font: {
+                size: 11
+              }
+            }
+          },
+          tooltip: {
+            callbacks: {
+              afterBody: function(tooltipItems) {
+                const timeLabel = tooltipItems[0].label;
+                const isWithinWindow = timeLabel >= startTime.slice(0, 5) && timeLabel <= endTime.slice(0, 5);
+                return isWithinWindow ? 'Within imaging window' : 'Outside imaging window';
+              }
+            }
+          }
+        },
         scales: {
           y: {
             title: {
@@ -653,19 +710,89 @@ document.addEventListener("DOMContentLoaded", function () {
               text: "Altitude (°)"
             },
             suggestedMin: 0,
-            suggestedMax: 90
+            suggestedMax: 90,
+            grid: {
+              color: function(context) {
+                if (context.tick.value === minAltitude) {
+                  return 'rgba(244, 67, 54, 0.3)';
+                }
+                return 'rgba(0, 0, 0, 0.1)';
+              }
+            }
           },
           x: {
             title: {
               display: true,
               text: "Local Time"
+            },
+            grid: {
+              color: function(context) {
+                const timeLabel = altitudeData[context.index]?.time_label;
+                if (timeLabel) {
+                  const isWithinWindow = timeLabel >= startTime.slice(0, 5) && timeLabel <= endTime.slice(0, 5);
+                  return isWithinWindow ? 'rgba(76, 175, 80, 0.2)' : 'rgba(158, 158, 158, 0.1)';
+                }
+                return 'rgba(0, 0, 0, 0.1)';
+              }
             }
           }
         },
-        plugins: {
-          legend: { display: false }
+        elements: {
+          point: {
+            hoverRadius: 6
+          }
         }
-      }
+      },
+      plugins: [{
+        id: 'windowShading',
+        beforeDatasetsDraw: function(chart) {
+          const ctx = chart.ctx;
+          const chartArea = chart.chartArea;
+          const meta = chart.getDatasetMeta(0);
+          
+          if (!meta.data.length) return;
+          
+          // Draw background shading for the imaging window
+          ctx.save();
+          
+          let startIndex = -1;
+          let endIndex = -1;
+          
+          // Find the start and end indices of the imaging window
+          altitudeData.forEach((point, index) => {
+            const timeLabel = point.time_label;
+            if (timeLabel >= startTime.slice(0, 5) && startIndex === -1) {
+              startIndex = index;
+            }
+            if (timeLabel <= endTime.slice(0, 5)) {
+              endIndex = index;
+            }
+          });
+          
+          if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
+            const startX = meta.data[startIndex].x;
+            const endX = meta.data[endIndex].x;
+            
+            // Draw green shading for imaging window
+            ctx.fillStyle = 'rgba(76, 175, 80, 0.15)';
+            ctx.fillRect(startX, chartArea.top, endX - startX, chartArea.bottom - chartArea.top);
+            
+            // Draw borders for the window
+            ctx.strokeStyle = 'rgba(76, 175, 80, 0.5)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([3, 3]);
+            ctx.beginPath();
+            ctx.moveTo(startX, chartArea.top);
+            ctx.lineTo(startX, chartArea.bottom);
+            ctx.moveTo(endX, chartArea.top);
+            ctx.lineTo(endX, chartArea.bottom);
+            ctx.stroke();
+            ctx.setLineDash([]);
+          }
+          
+          ctx.restore();
+        }
+      }]
     });
   }
 });

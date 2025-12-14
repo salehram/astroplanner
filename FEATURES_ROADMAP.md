@@ -165,15 +165,30 @@ Database-driven palette management system allowing custom palettes beyond the ha
 
 ---
 
-## 🟡 8. Altitude Chart Enhancements (Pending)
+## ✅ 8. Altitude Chart Enhancements
 ### Required
-- Draw a horizontal line at the altitude threshold (e.g., 30°).
+- Draw a horizontal line at the altitude threshold (e.g., 30°). ✅
 - Shade the region corresponding to the valid imaging window:
-  - Inside window: highlighted
-  - Outside window: dimmed
+  - Inside window: highlighted ✅
+  - Outside window: dimmed ✅
+
+### Completed
+- **Threshold Line**: Added dashed red line showing minimum altitude threshold with legend
+- **Window Shading**: 
+  - Green shaded area highlights valid imaging window
+  - Gray shading for times outside the imaging window
+  - Dashed vertical lines mark window boundaries
+- **Enhanced Interactivity**:
+  - Improved legend showing both altitude curve and threshold line
+  - Enhanced tooltips indicating whether time is within imaging window
+  - Grid line coloring to reinforce window visualization
+- **Visual Improvements**:
+  - Better color scheme with blue altitude curve and red threshold
+  - Responsive design with improved hover interactions
+  - Custom Chart.js plugin for background shading
 
 ### Status  
-Not implemented yet.
+**✅ Fully implemented and working.**
 
 ---
 
@@ -246,23 +261,24 @@ Not started.
 | Global/per-target configuration | ✅ Done | Observer location, pack-up time, min altitude |
 | Palette management | ✅ Done | Database-driven with custom palette support |
 | Plan & Palette Enhancements | ✅ Done | H:M:S formatting and bidirectional frame/time inputs |
-| Altitude chart enhancements | 🟡 Pending | Draw threshold + shading |
+| Altitude chart enhancements | ✅ Done | Threshold lines, window shading, enhanced interactivity |
 | Session recommendation engine | 🟡 Pending | AI-driven session optimization |
 | Automatic recomputation | 🟡 Pending | After changes to settings |
 
 ---
 
 # Next Recommended Focus
-**8. Altitude Chart Enhancements** - Visual improvements to the altitude chart  
-Now that the Plan & Palette Enhancements are complete with H:M:S formatting and bidirectional frame/time inputs, the next logical step is improving the altitude chart visualization. This includes:
-- Drawing a horizontal line at the minimum altitude threshold (e.g., 30°)
-- Shading the region corresponding to the valid imaging window (highlighted inside window, dimmed outside)
-- Better visual indicators for optimal imaging times
-- Better exposure planning workflows
+**9. Session Recommendation Engine** - AI-driven session optimization  
+Now that the core planning features are complete (time formatting, palette management, altitude visualization), the next major enhancement is implementing an intelligent session recommendation engine. This ambitious feature includes:
+- Weather integration and forecasting
+- AI-driven target priority scoring based on multiple factors
+- Automatic session planning and filter switching recommendations
+- Machine learning to adapt to user behavior and local conditions
 
-Alternative focus areas:
-- **8. Altitude Chart Enhancements** - Threshold lines and window shading visualization
-- **9. Session Recommendation Engine** - AI-driven session optimization (ambitious future feature)
+Alternative smaller enhancements:
+- **10. Automatic Recomputation** - Dynamic updates when settings change
+- **Additional Export Formats** - More observatory software integrations
+- **Mobile Responsiveness** - Enhanced mobile interface optimizations
 
 ---
 
