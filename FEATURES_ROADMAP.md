@@ -102,19 +102,37 @@ None.
 
 ---
 
-## 🟡 6. Palette Management System (Pending)
-### Required
-- Create a `Palette` table in the database.
-- UI for:
-  - Add / edit / delete palettes
-  - Edit filter weights
-  - Rename channels
-  - Add creative blends (e.g., Foraxx, dynamic SHO variants)
-- Tie palette to each target.
-- Recompute plans when palette changes.
+## ✅ 6. Palette Management System (Completed)
+### Summary  
+Database-driven palette management system allowing custom palettes beyond the hardcoded SHO/HOO/LRGB/LRGBNB options.
+
+### Completed
+- **Database Model**: Created `Palette` table with full palette definitions in JSON format
+- **Database Schema Updates**: 
+  - Added `palette_id` foreign key to `Target` and `TargetPlan` models
+  - Maintained backward compatibility with existing `preferred_palette` and `palette_name` string fields
+- **Default Palettes**: Automatically initialized system palettes (SHO, HOO, LRGB, LRGBNB) with detailed filter configurations
+- **Palette Management UI**:
+  - List view showing all available palettes (system and custom)
+  - Create new custom palettes with dynamic filter channel configuration
+  - Edit existing custom palettes (system palettes are read-only)
+  - Delete custom palettes (with safety checks for usage)
+  - Navigation integration in main navbar
+- **Integration**: Updated target creation and editing forms to use database palettes instead of hardcoded options
+- **Filter Configuration**: Each palette stores detailed filter information including:
+  - Filter names, labels, and descriptions
+  - RGB channel mappings
+  - Default exposure times and weights
+  - Custom channel configurations
+
+### Technical Implementation
+- Palettes stored as JSON in database for maximum flexibility
+- Backward compatibility maintained during transition
+- System palettes protected from modification/deletion
+- Usage validation prevents deletion of palettes in use by targets
 
 ### Status  
-Not started.
+**✅ Fully implemented and working.**
 
 ---
 
@@ -149,7 +167,44 @@ Not implemented yet.
 
 ---
 
-## 🟡 9. Automatic Recompute Pipeline (Pending)
+## 🟡 9. Session Recommendation Engine with AI-Driven Logic (Pending)
+### Summary
+Implement an intelligent session recommendation engine that uses AI/ML to optimize imaging sessions based on multiple factors and user preferences.
+
+### Required Features
+- **Weather Integration**: Real-time weather data and forecasting
+- **Target Priority Scoring**: AI-driven ranking based on:
+  - Current target visibility and altitude
+  - Weather conditions and forecast
+  - Moon phase and illumination impact
+  - Historical completion data
+  - User preferences and imaging history
+- **Session Planning**: Automatically suggest:
+  - Best targets for tonight/upcoming nights
+  - Optimal imaging order within a session
+  - Filter switching recommendations to minimize equipment changes
+  - Adaptive scheduling based on changing conditions
+- **Machine Learning Components**:
+  - Learn from user behavior and preferences
+  - Improve recommendations based on session outcomes
+  - Adapt to local weather patterns and seeing conditions
+- **Integration Features**:
+  - Export recommended session plans to NINA
+  - Real-time session adjustments based on conditions
+  - Historical analysis and recommendation accuracy tracking
+
+### Technical Considerations
+- Weather API integration (OpenWeatherMap, Clear Outside, etc.)
+- ML framework integration (scikit-learn, TensorFlow Lite, etc.)
+- Background scheduling and recommendation updates
+- User feedback collection for model training
+
+### Status  
+**Feature concept added to roadmap - not yet started.**
+
+---
+
+## 🟡 10. Automatic Recompute Pipeline (Pending)
 Any of the following should automatically trigger a full recomputation:
 - Changing pack-up time  
 - Changing altitude threshold  
@@ -179,23 +234,24 @@ Not started.
 | Database rebuild support | ✅ Done | CLI command available |
 | NINA export (remaining subs) | ✅ Done | Fully functional |
 | Global/per-target configuration | ✅ Done | Observer location, pack-up time, min altitude |
-| Palette management | 🟡 Pending | Requires DB + UI |
+| Palette management | ✅ Done | Database-driven with custom palette support |
 | Planned/completed H:M:S | 🟡 Pending | Add formatting + editable logic |
 | Altitude chart enhancements | 🟡 Pending | Draw threshold + shading |
+| Session recommendation engine | 🟡 Pending | AI-driven session optimization |
 | Automatic recomputation | 🟡 Pending | After changes to settings |
 
 ---
 
 # Next Recommended Focus
-**6. Palette Management System**  
-Now that global configuration is complete, the next logical step is implementing a database-driven palette management system. This will allow:
-- Creating custom palettes beyond the hardcoded SHO/HOO/LRGB/LRGBNB options
-- Editing filter weights and channel configurations
-- Dynamic palette creation for creative blends
+**7. Plan & Palette Enhancements** - H:M:S formatting and bidirectional frame/time inputs  
+Now that the palette management system is complete, the next logical step is improving the user experience for planning exposures. This includes:
+- Converting time displays from minutes-only to H:M:S format
+- Making frame count and time inputs bidirectional (changing one updates the other)
+- Better exposure planning workflows
 
 Alternative focus areas:
-- **7. Plan & Palette Enhancements** - H:M:S formatting and bidirectional frame/time inputs
 - **8. Altitude Chart Enhancements** - Threshold lines and window shading visualization
+- **9. Session Recommendation Engine** - AI-driven session optimization (ambitious future feature)
 
 ---
 

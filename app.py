@@ -99,6 +99,36 @@ class ObjectMapping(db.Model):
         return f"<ObjectMapping {self.object_name} -> {self.target_type.name if self.target_type else 'None'}>"
 
 
+class Palette(db.Model):
+    __tablename__ = "palettes"
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64), unique=True, nullable=False)  # "SHO", "HOO", "LRGB", "Custom Foraxx"
+    display_name = db.Column(db.String(128), nullable=False)  # "Sulfur-Hydrogen-Oxygen (SHO)"
+    description = db.Column(db.Text)  # Detailed description
+    filters_json = db.Column(db.Text, nullable=False)  # JSON with filter definitions
+    is_system = db.Column(db.Boolean, default=False)  # True for built-in palettes, False for user custom
+    is_active = db.Column(db.Boolean, default=True)  # Can be disabled without deletion
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    targets = relationship("Target", back_populates="palette")
+    target_plans = relationship("TargetPlan", back_populates="palette")
+    
+    def __repr__(self):
+        return f"<Palette {self.name} ({'system' if self.is_system else 'custom'})>"
+    
+    def get_filters(self):
+        """Get filter configuration as Python dict."""
+        import json
+        return json.loads(self.filters_json) if self.filters_json else {}
+    
+    def set_filters(self, filters_dict):
+        """Set filter configuration from Python dict."""
+        import json
+        self.filters_json = json.dumps(filters_dict)
+
+
 class Target(db.Model):
     __tablename__ = "targets"
 
@@ -115,7 +145,8 @@ class Target(db.Model):
     notes = db.Column(db.Text)
     pixinsight_workflow = db.Column(db.Text)
 
-    preferred_palette = db.Column(db.String(64), default="SHO")
+    preferred_palette = db.Column(db.String(64), default="SHO")  # Keep for backward compatibility
+    palette_id = db.Column(db.Integer, db.ForeignKey("palettes.id"))  # New FK reference
     packup_time_local = db.Column(db.String(5), default="01:00")  # "HH:MM"
     
     # Configuration overrides (NULL = use global config)
@@ -131,6 +162,7 @@ class Target(db.Model):
                          cascade="all, delete-orphan")
     sessions = relationship("ImagingSession", back_populates="target",
                             cascade="all, delete-orphan")
+    palette = relationship("Palette", back_populates="targets")
 
 
 class TargetPlan(db.Model):
@@ -138,7 +170,8 @@ class TargetPlan(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     target_id = db.Column(db.Integer, db.ForeignKey("targets.id"), nullable=False)
-    palette_name = db.Column(db.String(64), nullable=False)
+    palette_name = db.Column(db.String(64), nullable=False)  # Keep for backward compatibility
+    palette_id = db.Column(db.Integer, db.ForeignKey("palettes.id"))  # New FK reference
 
     # JSON string:
     # {
@@ -156,6 +189,7 @@ class TargetPlan(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     target = relationship("Target", back_populates="plans")
+    palette = relationship("Palette", back_populates="target_plans")
 
 
 class ImagingSession(db.Model):
@@ -230,9 +264,16 @@ def get_global_config():
 
 
 def get_effective_packup_time(target):
-    """Get effective pack-up time for target (override or global default)."""
+    """Get effective pack-up time for target (override from settings, or target's own time)."""
+    # First priority: explicit override from target settings page
     if target.override_packup_time:
         return target.override_packup_time
+    
+    # Second priority: target's own pack-up time (always has a value)
+    if target.packup_time_local:
+        return target.packup_time_local
+    
+    # Fallback: global default (should rarely be needed since packup_time_local should always be set)
     return get_global_config().default_packup_time
 
 
@@ -527,7 +568,9 @@ def new_target():
         if not preferred_palette or preferred_palette == "auto":
             preferred_palette = get_recommended_palette(target_type)
         
-        packup_time_local = request.form.get("packup_time_local") or "01:00"
+        # Handle pack-up time: use submitted value, falling back to global default
+        global_config = get_global_config()
+        packup_time_local = request.form.get("packup_time_local") or global_config.default_packup_time
 
         target = Target(
             name=name,
@@ -562,7 +605,10 @@ def new_target():
         flash("Target created.", "success")
         return redirect(url_for("target_detail", target_id=target.id))
 
-    return render_template("target_form.html", target=None)
+    # Pass global config to template for default values
+    global_config = get_global_config()
+    palettes = Palette.query.filter_by(is_active=True).order_by(Palette.name).all()
+    return render_template("target_form.html", target=None, global_config=global_config, palettes=palettes)
 
 
 @app.route("/target/<int:target_id>")
@@ -602,6 +648,9 @@ def target_detail(target_id):
         progress_seconds[s.channel] += total_seconds
         progress_minutes[s.channel] += total_seconds / 60.0
 
+    # Get active palettes for palette selector
+    palettes = Palette.query.filter_by(is_active=True).order_by(Palette.name).all()
+
     return render_template(
         "target_detail.html",
         target=target,
@@ -615,6 +664,7 @@ def target_detail(target_id):
         window_info=window_info,
         progress_minutes=progress_minutes,
         progress_seconds=progress_seconds,
+        palettes=palettes,
     )
 
 @app.post("/target/<int:target_id>/export_nina")
@@ -753,7 +803,10 @@ def edit_target(target_id):
         flash("Target updated.", "success")
         return redirect(url_for("target_detail", target_id=target.id))
 
-    return render_template("target_form.html", target=target)
+    # Pass global config to template for default values
+    global_config = get_global_config()
+    palettes = Palette.query.filter_by(is_active=True).order_by(Palette.name).all()
+    return render_template("target_form.html", target=target, global_config=global_config, palettes=palettes)
 
 
 @app.route("/target/<int:target_id>/plan/new", methods=["POST"])
@@ -1073,6 +1126,145 @@ def manage_object_mappings():
     return render_template("manage_object_mappings.html", mappings=mappings, target_types=target_types)
 
 
+@app.route("/palettes")
+def palette_list():
+    """List all palettes."""
+    palettes = Palette.query.filter_by(is_active=True).order_by(Palette.is_system.desc(), Palette.name).all()
+    return render_template("palette_list.html", palettes=palettes)
+
+
+@app.route("/palette/new", methods=["GET", "POST"])
+def new_palette():
+    """Create a new custom palette."""
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        display_name = request.form.get("display_name", "").strip()
+        description = request.form.get("description", "").strip()
+        
+        # Parse filter channels from form
+        channels = []
+        channel_count = int(request.form.get("channel_count", 0))
+        
+        for i in range(channel_count):
+            channel_name = request.form.get(f"channel_{i}_name", "").strip()
+            channel_label = request.form.get(f"channel_{i}_label", "").strip()
+            channel_filter = request.form.get(f"channel_{i}_filter", "").strip()
+            channel_rgb = request.form.get(f"channel_{i}_rgb_channel", "red")
+            channel_exposure = int(request.form.get(f"channel_{i}_exposure", 300))
+            channel_weight = float(request.form.get(f"channel_{i}_weight", 1.0))
+            
+            if channel_name and channel_label:
+                channels.append({
+                    "name": channel_name,
+                    "label": channel_label,
+                    "filter": channel_filter,
+                    "rgb_channel": channel_rgb,
+                    "default_exposure": channel_exposure,
+                    "default_weight": channel_weight
+                })
+        
+        if name and display_name and channels:
+            try:
+                palette = Palette(
+                    name=name,
+                    display_name=display_name,
+                    description=description,
+                    is_system=False,
+                    is_active=True
+                )
+                palette.set_filters({"channels": channels})
+                
+                db.session.add(palette)
+                db.session.commit()
+                flash(f"Palette '{display_name}' created successfully!", "success")
+                return redirect(url_for("palette_list"))
+            except Exception as e:
+                db.session.rollback()
+                flash(f"Error creating palette: {e}", "error")
+        else:
+            flash("Please fill in all required fields and add at least one channel.", "error")
+    
+    return render_template("palette_form.html", palette=None)
+
+
+@app.route("/palette/<int:palette_id>/edit", methods=["GET", "POST"])
+def edit_palette(palette_id):
+    """Edit an existing palette."""
+    palette = Palette.query.get_or_404(palette_id)
+    
+    # Don't allow editing system palettes
+    if palette.is_system:
+        flash("System palettes cannot be edited.", "error")
+        return redirect(url_for("palette_list"))
+    
+    if request.method == "POST":
+        palette.display_name = request.form.get("display_name", "").strip()
+        palette.description = request.form.get("description", "").strip()
+        
+        # Parse updated filter channels
+        channels = []
+        channel_count = int(request.form.get("channel_count", 0))
+        
+        for i in range(channel_count):
+            channel_name = request.form.get(f"channel_{i}_name", "").strip()
+            channel_label = request.form.get(f"channel_{i}_label", "").strip()
+            channel_filter = request.form.get(f"channel_{i}_filter", "").strip()
+            channel_rgb = request.form.get(f"channel_{i}_rgb_channel", "red")
+            channel_exposure = int(request.form.get(f"channel_{i}_exposure", 300))
+            channel_weight = float(request.form.get(f"channel_{i}_weight", 1.0))
+            
+            if channel_name and channel_label:
+                channels.append({
+                    "name": channel_name,
+                    "label": channel_label,
+                    "filter": channel_filter,
+                    "rgb_channel": channel_rgb,
+                    "default_exposure": channel_exposure,
+                    "default_weight": channel_weight
+                })
+        
+        if palette.display_name and channels:
+            try:
+                palette.set_filters({"channels": channels})
+                db.session.commit()
+                flash(f"Palette '{palette.display_name}' updated successfully!", "success")
+                return redirect(url_for("palette_list"))
+            except Exception as e:
+                db.session.rollback()
+                flash(f"Error updating palette: {e}", "error")
+        else:
+            flash("Please fill in all required fields and add at least one channel.", "error")
+    
+    return render_template("palette_form.html", palette=palette)
+
+
+@app.route("/palette/<int:palette_id>/delete", methods=["POST"])
+def delete_palette(palette_id):
+    """Delete a custom palette."""
+    palette = Palette.query.get_or_404(palette_id)
+    
+    # Don't allow deleting system palettes
+    if palette.is_system:
+        flash("System palettes cannot be deleted.", "error")
+        return redirect(url_for("palette_list"))
+    
+    # Check if any targets use this palette
+    targets_using = Target.query.filter_by(palette_id=palette.id).count()
+    if targets_using > 0:
+        flash(f"Cannot delete palette - {targets_using} target(s) are using it.", "error")
+        return redirect(url_for("palette_list"))
+    
+    try:
+        db.session.delete(palette)
+        db.session.commit()
+        flash(f"Palette '{palette.display_name}' deleted successfully!", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error deleting palette: {e}", "error")
+    
+    return redirect(url_for("palette_list"))
+
+
 # ---------------------------------------------------------------------------
 # CLI helper
 # ---------------------------------------------------------------------------
@@ -1112,6 +1304,76 @@ def init_db():
         
         db.session.commit()
         print("Created default target types.")
+    
+    # Create default palettes if none exist
+    if not Palette.query.first():
+        default_palettes = [
+            {
+                "name": "SHO",
+                "display_name": "Sulfur-Hydrogen-Oxygen (SHO)",
+                "description": "Classic Hubble-style narrowband palette using SII (red), Ha (green), OIII (blue)",
+                "filters": {
+                    "channels": [
+                        {"name": "S", "label": "SII", "filter": "Sulfur II", "rgb_channel": "red", "default_exposure": 300, "default_weight": 1.0},
+                        {"name": "H", "label": "Ha", "filter": "Hydrogen Alpha", "rgb_channel": "green", "default_exposure": 300, "default_weight": 1.0},
+                        {"name": "O", "label": "OIII", "filter": "Oxygen III", "rgb_channel": "blue", "default_exposure": 300, "default_weight": 1.0}
+                    ]
+                }
+            },
+            {
+                "name": "HOO",
+                "display_name": "Hydrogen-Oxygen (HOO)",
+                "description": "Two-filter narrowband palette using Ha (red), OIII (blue), synthetic green",
+                "filters": {
+                    "channels": [
+                        {"name": "H", "label": "Ha", "filter": "Hydrogen Alpha", "rgb_channel": "red", "default_exposure": 300, "default_weight": 1.0},
+                        {"name": "O", "label": "OIII", "filter": "Oxygen III", "rgb_channel": "blue", "default_exposure": 300, "default_weight": 1.0}
+                    ]
+                }
+            },
+            {
+                "name": "LRGB",
+                "display_name": "Luminance-Red-Green-Blue (LRGB)",
+                "description": "Traditional broadband palette for natural color imaging",
+                "filters": {
+                    "channels": [
+                        {"name": "L", "label": "Lum", "filter": "Luminance", "rgb_channel": "luminance", "default_exposure": 180, "default_weight": 4.0},
+                        {"name": "R", "label": "Red", "filter": "Red", "rgb_channel": "red", "default_exposure": 180, "default_weight": 1.0},
+                        {"name": "G", "label": "Green", "filter": "Green", "rgb_channel": "green", "default_exposure": 180, "default_weight": 1.0},
+                        {"name": "B", "label": "Blue", "filter": "Blue", "rgb_channel": "blue", "default_exposure": 180, "default_weight": 1.0}
+                    ]
+                }
+            },
+            {
+                "name": "LRGBNB",
+                "display_name": "LRGB + Narrowband",
+                "description": "Broadband LRGB enhanced with narrowband filters for nebular detail",
+                "filters": {
+                    "channels": [
+                        {"name": "L", "label": "Lum", "filter": "Luminance", "rgb_channel": "luminance", "default_exposure": 180, "default_weight": 3.0},
+                        {"name": "R", "label": "Red", "filter": "Red", "rgb_channel": "red", "default_exposure": 180, "default_weight": 1.0},
+                        {"name": "G", "label": "Green", "filter": "Green", "rgb_channel": "green", "default_exposure": 180, "default_weight": 1.0},
+                        {"name": "B", "label": "Blue", "filter": "Blue", "rgb_channel": "blue", "default_exposure": 180, "default_weight": 1.0},
+                        {"name": "H", "label": "Ha", "filter": "Hydrogen Alpha", "rgb_channel": "red", "default_exposure": 300, "default_weight": 0.5},
+                        {"name": "O", "label": "OIII", "filter": "Oxygen III", "rgb_channel": "blue", "default_exposure": 300, "default_weight": 0.5}
+                    ]
+                }
+            }
+        ]
+        
+        for palette_data in default_palettes:
+            palette = Palette(
+                name=palette_data["name"],
+                display_name=palette_data["display_name"],
+                description=palette_data["description"],
+                is_system=True,
+                is_active=True
+            )
+            palette.set_filters(palette_data["filters"])
+            db.session.add(palette)
+        
+        db.session.commit()
+        print("Created default palettes.")
     
     print("Database initialized.")
 

@@ -13,6 +13,7 @@
     padding: 0.5rem;
     margin-top: 0.5rem;
     border-radius: 0.25rem;
+    color: #d1e7dd;
   }
 </style>
 
@@ -84,9 +85,9 @@
         <label class="form-label">Preferred Palette</label>
         {% set pal = target.preferred_palette if target else 'SHO' %}
         <select class="form-select" name="preferred_palette" id="preferred_palette">
-          {% for v in ["SHO", "HOO", "LRGB", "LRGBNB"] %}
-          <option value="{{ v }}" {% if pal==v %}selected{% endif %}>
-            {{ v }}
+          {% for palette in palettes %}
+          <option value="{{ palette.name }}" {% if pal==palette.name %}selected{% endif %}>
+            {{ palette.display_name }}
           </option>
           {% endfor %}
         </select>
@@ -99,7 +100,8 @@
       <div class="mb-3">
         <label class="form-label">Pack-up Time (local, HH:MM)</label>
         <input class="form-control" name="packup_time_local"
-               value="{{ (target and target.packup_time_local) or '01:00' }}">
+               value="{{ (target and target.packup_time_local) or global_config.default_packup_time }}">
+        <div class="form-text">Default: {{ global_config.default_packup_time }} (can be changed in Settings)</div>
       </div>
 
     </div>
@@ -172,10 +174,10 @@ document.addEventListener("DOMContentLoaded", function () {
       // Show recommendation text
       paletteRecommendation.innerHTML = `
         <div class="palette-suggestion">
-          <span class="text-success fw-bold">
+          <span class="fw-bold">
             💡 Recommended: ${recommendedPalette}
           </span><br>
-          <small class="text-muted">${reason}</small>
+          <small>${reason}</small>
         </div>
       `;
     } else {

@@ -5,5 +5,7 @@ werkzeug==3.0.3
 tzdata
 
 # For the sky calculations:
-astropy==6.0.1
-astroplan==0.9
+# Note: Using newer versions compatible with Python 3.14 and Windows
+astropy>=7.2.0
+astroplan>=0.10.1
+numpy>=2.3.5

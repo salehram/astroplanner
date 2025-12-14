@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+  .channel-row {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+  
+  .channel-header {
+    display: flex;
+    justify-content: between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+  
+  .remove-channel {
+    margin-left: auto;
+  }
+</style>
+
+<h1 class="h4 mb-4">
+  {% if palette %}Edit Palette: {{ palette.display_name }}{% else %}Create New Palette{% endif %}
+</h1>
+
+<form method="post" id="paletteForm">
+  <div class="row">
+    <div class="col-md-6">
+      
+      <!-- Basic Info -->
+      <div class="mb-3">
+        <label class="form-label">Palette Name (Code)</label>
+        <input class="form-control" name="name" 
+               value="{{ palette.name if palette else '' }}" 
+               {% if palette %}readonly{% endif %} required
+               placeholder="e.g., CUSTOM_SHO">
+        <div class="form-text">Short technical name (cannot be changed after creation)</div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Display Name</label>
+        <input class="form-control" name="display_name" 
+               value="{{ palette.display_name if palette else '' }}" required
+               placeholder="e.g., Custom Sulfur-Hydrogen-Oxygen">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Description</label>
+        <textarea class="form-control" name="description" rows="3"
+                  placeholder="Describe this palette and when to use it...">{{ palette.description if palette else '' }}</textarea>
+      </div>
+      
+    </div>
+    
+    <div class="col-md-6">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6>Filter Channels</h6>
+        <button type="button" class="btn btn-sm btn-outline-light" onclick="addChannel()">
+          <i class="bi bi-plus"></i> Add Channel
+        </button>
+      </div>
+      
+      <div id="channelsContainer">
+        <!-- Channels will be populated by JavaScript -->
+      </div>
+      
+      <input type="hidden" name="channel_count" id="channelCount" value="0">
+    </div>
+  </div>
+
+  <!-- Submit -->
+  <div class="mt-4">
+    <button type="submit" class="btn btn-primary">
+      {% if palette %}Update Palette{% else %}Create Palette{% endif %}
+    </button>
+    <a href="{{ url_for('palette_list') }}" class="btn btn-secondary">Cancel</a>
+  </div>
+</form>
+
+<script>
+let channelCounter = 0;
+
+function addChannel(channelData = null) {
+  const container = document.getElementById('channelsContainer');
+  const channelId = channelCounter++;
+  
+  // Default values
+  const data = channelData || {
+    name: '',
+    label: '',
+    filter: '',
+    rgb_channel: 'red',
+    default_exposure: 300,
+    default_weight: 1.0
+  };
+  
+  const channelHtml = `
+    <div class="channel-row" id="channel_${channelId}">
+      <div class="channel-header">
+        <h6 class="mb-0">Channel ${channelId + 1}</h6>
+        <button type="button" class="btn btn-sm btn-outline-danger remove-channel" 
+                onclick="removeChannel(${channelId})">
+          <i class="bi bi-trash"></i>
+        </button>
+      </div>
+      
+      <div class="row">
+        <div class="col-6">
+          <label class="form-label small">Name/Code</label>
+          <input class="form-control form-control-sm" name="channel_${channelId}_name" 
+                 value="${data.name}" placeholder="H, S, O, L, R, G, B" required>
+        </div>
+        <div class="col-6">
+          <label class="form-label small">Label</label>
+          <input class="form-control form-control-sm" name="channel_${channelId}_label" 
+                 value="${data.label}" placeholder="Ha, SII, OIII, Lum, Red" required>
+        </div>
+      </div>
+      
+      <div class="row mt-2">
+        <div class="col-12">
+          <label class="form-label small">Filter Name</label>
+          <input class="form-control form-control-sm" name="channel_${channelId}_filter" 
+                 value="${data.filter}" placeholder="Hydrogen Alpha, Sulfur II, etc.">
+        </div>
+      </div>
+      
+      <div class="row mt-2">
+        <div class="col-4">
+          <label class="form-label small">RGB Channel</label>
+          <select class="form-select form-select-sm" name="channel_${channelId}_rgb_channel">
+            <option value="red" ${data.rgb_channel === 'red' ? 'selected' : ''}>Red</option>
+            <option value="green" ${data.rgb_channel === 'green' ? 'selected' : ''}>Green</option>
+            <option value="blue" ${data.rgb_channel === 'blue' ? 'selected' : ''}>Blue</option>
+            <option value="luminance" ${data.rgb_channel === 'luminance' ? 'selected' : ''}>Luminance</option>
+          </select>
+        </div>
+        <div class="col-4">
+          <label class="form-label small">Default Exposure (s)</label>
+          <input class="form-control form-control-sm" name="channel_${channelId}_exposure" 
+                 type="number" value="${data.default_exposure}" min="1">
+        </div>
+        <div class="col-4">
+          <label class="form-label small">Weight</label>
+          <input class="form-control form-control-sm" name="channel_${channelId}_weight" 
+                 type="number" step="0.1" value="${data.default_weight}" min="0">
+        </div>
+      </div>
+    </div>
+  `;
+  
+  container.insertAdjacentHTML('beforeend', channelHtml);
+  updateChannelCount();
+}
+
+function removeChannel(channelId) {
+  const element = document.getElementById(`channel_${channelId}`);
+  if (element) {
+    element.remove();
+    updateChannelCount();
+  }
+}
+
+function updateChannelCount() {
+  const channelRows = document.querySelectorAll('.channel-row');
+  document.getElementById('channelCount').value = channelRows.length;
+}
+
+// Initialize with existing palette data or default channels
+{% if palette %}
+const paletteData = {{ palette.get_filters() | tojson }};
+if (paletteData.channels) {
+  paletteData.channels.forEach(channel => addChannel(channel));
+}
+{% else %}
+// Add default SHO channels for new palette
+addChannel({name: 'S', label: 'SII', filter: 'Sulfur II', rgb_channel: 'red', default_exposure: 300, default_weight: 1.0});
+addChannel({name: 'H', label: 'Ha', filter: 'Hydrogen Alpha', rgb_channel: 'green', default_exposure: 300, default_weight: 1.0});
+addChannel({name: 'O', label: 'OIII', filter: 'Oxygen III', rgb_channel: 'blue', default_exposure: 300, default_weight: 1.0});
+{% endif %}
+</script>
+
+{% endblock %}
