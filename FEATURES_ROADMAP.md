@@ -229,6 +229,61 @@ Implement an intelligent session recommendation engine that uses AI/ML to optimi
 
 ---
 
+## 🟡 9.5. PostgreSQL Database Support for Cloud Deployment (Pending)
+### Summary
+Add PostgreSQL database support to enable deployment on serverless platforms like Google Cloud Run, AWS Lambda, or Kubernetes clusters where SQLite's file-based approach is not suitable.
+
+### Required Features
+- **Database Abstraction**: Maintain SQLAlchemy compatibility while supporting both SQLite and PostgreSQL
+- **Environment-based Configuration**: Automatic database selection based on environment variables
+- **Migration Support**: Database migration scripts that work with both SQLite and PostgreSQL
+- **Cloud Deployment Ready**: Configuration for:
+  - Google Cloud Run with Cloud SQL PostgreSQL
+  - AWS Lambda with RDS PostgreSQL  
+  - Kubernetes with PostgreSQL StatefulSet or managed database
+  - Docker Compose with PostgreSQL container
+
+### Technical Implementation
+- **Connection String Handling**: Enhanced database URL parsing for PostgreSQL connection strings
+- **Schema Compatibility**: Ensure all SQLAlchemy models work seamlessly with PostgreSQL
+- **Connection Pooling**: Implement proper connection pooling for production PostgreSQL deployments
+- **Environment Detection**: Automatic fallback to SQLite for local development, PostgreSQL for production
+- **Configuration Management**: Environment variables for:
+  - `DATABASE_URL`: Full PostgreSQL connection string
+  - `DB_TYPE`: Explicit database type selection (sqlite/postgresql)
+  - `DB_POOL_SIZE`: Connection pool configuration
+  - `DB_SSL_MODE`: SSL configuration for cloud databases
+
+### Deployment Scenarios
+- **Google Cloud Run**: Serverless deployment with Cloud SQL PostgreSQL instance
+- **Google Kubernetes Engine (GKE)**: Container deployment with managed PostgreSQL
+- **AWS ECS/Fargate**: Serverless containers with RDS PostgreSQL
+- **Docker Swarm**: Multi-node deployment with PostgreSQL service
+- **Heroku**: Platform-as-a-Service with Heroku PostgreSQL add-on
+
+### Migration Strategy
+- **Backward Compatibility**: Existing SQLite installations continue to work unchanged
+- **Database Migration Tools**: Scripts to migrate data from SQLite to PostgreSQL
+- **Development/Production Parity**: Same codebase works in both environments
+- **Testing**: Comprehensive testing on both database backends
+
+### Benefits
+- **Scalability**: PostgreSQL supports concurrent users and larger datasets
+- **Cloud Native**: Enables deployment on modern serverless and container platforms
+- **Production Ready**: Professional database backend suitable for multi-user scenarios
+- **High Availability**: PostgreSQL supports replication and failover configurations
+
+### Dependencies
+- `psycopg2-binary`: PostgreSQL adapter for Python
+- Updated connection string parsing
+- Environment-specific configuration files
+- Cloud deployment templates (Dockerfile, kubernetes.yaml, etc.)
+
+### Status  
+**Feature concept added to roadmap - not yet started.**
+
+---
+
 ## 🟡 10. Automatic Recompute Pipeline (Pending)
 Any of the following should automatically trigger a full recomputation:
 - Changing pack-up time  
@@ -263,6 +318,7 @@ Not started.
 | Plan & Palette Enhancements | ✅ Done | H:M:S formatting and bidirectional frame/time inputs |
 | Altitude chart enhancements | ✅ Done | Threshold lines, window shading, enhanced interactivity |
 | Session recommendation engine | 🟡 Pending | AI-driven session optimization |
+| PostgreSQL database support | 🟡 Pending | Cloud deployment readiness |
 | Automatic recomputation | 🟡 Pending | After changes to settings |
 
 ---
@@ -275,7 +331,8 @@ Now that the core planning features are complete (time formatting, palette manag
 - Automatic session planning and filter switching recommendations
 - Machine learning to adapt to user behavior and local conditions
 
-Alternative smaller enhancements:
+Alternative focus areas:
+- **9.5. PostgreSQL Database Support** - Enable cloud deployment on serverless platforms (Cloud Run, Kubernetes)
 - **10. Automatic Recomputation** - Dynamic updates when settings change
 - **Additional Export Formats** - More observatory software integrations
 - **Mobile Responsiveness** - Enhanced mobile interface optimizations
