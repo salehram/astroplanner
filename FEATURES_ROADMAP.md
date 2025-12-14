@@ -136,22 +136,32 @@ Database-driven palette management system allowing custom palettes beyond the ha
 
 ---
 
-## 🟡 7. Plan & Palette Enhancements (Pending)
+## ✅ 7. Plan & Palette Enhancements
 ### 7.1 Show Planned & Completed Times in H:M:S
 - Planned time currently shown only in minutes.
 - Completed exposure totals also shown only in minutes.
 - Need:
-  - H:M:S formatting
+  - H:M:S formatting ✅
   - Ability to enter total planned time in either:
-    - Minutes
-    - HH:MM:SS format
+    - Minutes ✅
+    - HH:MM:SS format ✅
 
 ### 7.2 Make Frames & Time Inputs Bidirectional
-- Changing planned minutes should update # of required subs.
-- Changing # of subs should update planned minutes.
+- Changing planned minutes should update # of required subs. ✅
+- Changing # of subs should update planned minutes. ✅
+
+### Completed  
+- **H:M:S Time Formatting**: Created `time_utils.py` with functions for H:M:S conversion
+- **Template Updates**: Updated index.html and target_detail.html to display times in both minutes and H:M:S format
+- **Bidirectional Inputs**: 
+  - Total planned time can be entered in minutes or H:M:S format with real-time bidirectional conversion
+  - Channel-level time inputs also support bidirectional minute ↔ H:M:S conversion
+  - Frame count inputs automatically update time fields and vice versa
+  - All inputs sync in real-time as users type
+- **JavaScript Enhancements**: Added parseHMS(), minutesToHMS(), and enhanced recalcFrames() for full bidirectional functionality
 
 ### Status  
-Partially implemented, needs full bidirectional logic.
+**✅ Fully implemented and working.**
 
 ---
 
@@ -235,7 +245,7 @@ Not started.
 | NINA export (remaining subs) | ✅ Done | Fully functional |
 | Global/per-target configuration | ✅ Done | Observer location, pack-up time, min altitude |
 | Palette management | ✅ Done | Database-driven with custom palette support |
-| Planned/completed H:M:S | 🟡 Pending | Add formatting + editable logic |
+| Plan & Palette Enhancements | ✅ Done | H:M:S formatting and bidirectional frame/time inputs |
 | Altitude chart enhancements | 🟡 Pending | Draw threshold + shading |
 | Session recommendation engine | 🟡 Pending | AI-driven session optimization |
 | Automatic recomputation | 🟡 Pending | After changes to settings |
@@ -243,10 +253,11 @@ Not started.
 ---
 
 # Next Recommended Focus
-**7. Plan & Palette Enhancements** - H:M:S formatting and bidirectional frame/time inputs  
-Now that the palette management system is complete, the next logical step is improving the user experience for planning exposures. This includes:
-- Converting time displays from minutes-only to H:M:S format
-- Making frame count and time inputs bidirectional (changing one updates the other)
+**8. Altitude Chart Enhancements** - Visual improvements to the altitude chart  
+Now that the Plan & Palette Enhancements are complete with H:M:S formatting and bidirectional frame/time inputs, the next logical step is improving the altitude chart visualization. This includes:
+- Drawing a horizontal line at the minimum altitude threshold (e.g., 30°)
+- Shading the region corresponding to the valid imaging window (highlighted inside window, dimmed outside)
+- Better visual indicators for optimal imaging times
 - Better exposure planning workflows
 
 Alternative focus areas:

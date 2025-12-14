@@ -76,11 +76,19 @@
 
             <div class="row mb-3">
               <div class="col-md-4 mb-2">
-                <label class="form-label">Total Planned (minutes)</label>
-                <input class="form-control form-control-sm"
-                       type="number" step="1" min="0"
-                       name="total_planned_minutes"
-                       value="{{ plan_data.total_planned_minutes }}">
+                <label class="form-label">Total Planned Time</label>
+                <div class="input-group input-group-sm">
+                  <input id="total_planned_minutes" class="form-control"
+                         type="number" step="1" min="0"
+                         name="total_planned_minutes"
+                         value="{{ plan_data.total_planned_minutes }}"
+                         placeholder="Minutes">
+                  <span class="input-group-text">min</span>
+                </div>
+                <input id="total_planned_hms" class="form-control form-control-sm mt-1"
+                       type="text" placeholder="H:M:S format (e.g. 6:00:00)"
+                       title="Enter time in H:M:S format">
+                <small class="text-muted">{{ (plan_data.total_planned_minutes * 60) | hms }}</small>
               </div>
 
               <div class="col-md-4 mb-2">
@@ -100,14 +108,14 @@
                   <tr>
                     <th>Channel</th>
                     <th>Label</th>
-                    <th>Planned (min)</th>
+                    <th>Planned Time</th>
                     <th>Planned (h:m:s)</th>
                     <th>Sub (s)</th>
-                    <th>Completed (min)</th>
+                    <th>Completed Time</th>
                     <th>Planned Frames</th>
                     <th>Done Frames</th>
                     <th>Remaining Frames</th>
-                    <th>Remaining (min)</th>
+                    <th>Remaining Time</th>
                     <th>Remaining (h:m:s)</th>
                     <th>Status</th>
                   </tr>
@@ -123,10 +131,14 @@
 
                       <!-- Planned minutes (editable) -->
                       <td>
-                        <input class="form-control form-control-sm channel-minutes minutes-input"
+                        <input class="form-control form-control-sm channel-minutes minutes-input mb-1"
                               type="number" step="1" min="0"
                               name="ch_{{ ch.name }}_minutes"
-                              value="{{ ch.planned_minutes }}">
+                              value="{{ ch.planned_minutes }}"
+                              title="Minutes">
+                        <input class="form-control form-control-sm channel-hms hms-input"
+                              type="text" placeholder="H:M:S"
+                              title="H:M:S format (e.g. 3:00:00)">
                       </td>
 
                       <!-- Planned H:M:S (computed) -->
@@ -410,6 +422,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     rows.forEach(row => {
       const minInput = row.querySelector("input.channel-minutes");
+      const hmsInput = row.querySelector("input.channel-hms");
       const subInput = row.querySelector("input.channel-subexp");
       const doneCell = row.querySelector("td.completed-minutes");
       const framesInput = row.querySelector("input.planned-frames-input");
@@ -422,6 +435,26 @@ document.addEventListener("DOMContentLoaded", function () {
       const sb = row.querySelector(".status-badge");
 
       if (!minInput || !subInput || !doneCell) return;
+
+      // Handle bidirectional minutes <-> H:M:S conversion for channels
+      if (hmsInput) {
+        const active = document.activeElement;
+        
+        if (active === hmsInput) {
+          // User is editing HMS: update minutes
+          const seconds = parseHMS(hmsInput.value);
+          if (seconds !== null) {
+            const minutes = seconds / 60;
+            minInput.value = minutes.toFixed(1);
+          }
+        } else if (active === minInput || !hmsInput.value) {
+          // User is editing minutes or HMS is empty: update HMS
+          const minutes = parseFloat(minInput.value);
+          if (!isNaN(minutes) && minutes >= 0) {
+            hmsInput.value = minutesToHMS(minutes);
+          }
+        }
+      }
 
       // Base values
       let mins = parseFloat(minInput.value);
@@ -440,6 +473,10 @@ document.addEventListener("DOMContentLoaded", function () {
           // User is editing frames: drive minutes from frames
           mins = (framesVal * exp) / 60.0;
           minInput.value = mins.toFixed(1);
+          // Also update H:M:S field
+          if (hmsInput) {
+            hmsInput.value = minutesToHMS(mins);
+          }
         } else {
           // User is editing minutes / subexposure / global exp:
           // recompute frames from minutes
@@ -449,6 +486,11 @@ document.addEventListener("DOMContentLoaded", function () {
             framesVal = 0;
           }
           framesInput.value = framesVal > 0 ? framesVal : "";
+          
+          // Also update H:M:S field when not the active element
+          if (hmsInput && active !== hmsInput && mins >= 0) {
+            hmsInput.value = minutesToHMS(mins);
+          }
         }
       }
 
@@ -497,6 +539,84 @@ document.addEventListener("DOMContentLoaded", function () {
       if (rf) rf.textContent = remainingFrames;
     });
   }
+
+  // H:M:S parsing and formatting utilities
+  function parseHMS(hmsString) {
+    if (!hmsString || !hmsString.trim()) return null;
+    
+    const str = hmsString.trim();
+    
+    // Try H:M:S or H:M format
+    if (str.includes(':')) {
+      const parts = str.split(':').map(p => parseInt(p));
+      if (parts.length === 2 && !parts.some(isNaN)) {
+        return parts[0] * 3600 + parts[1] * 60; // H:M
+      } else if (parts.length === 3 && !parts.some(isNaN)) {
+        return parts[0] * 3600 + parts[1] * 60 + parts[2]; // H:M:S
+      }
+    }
+    
+    // Try as decimal (treat as hours if <= 24, otherwise minutes)
+    const value = parseFloat(str);
+    if (!isNaN(value)) {
+      return value <= 24 ? value * 3600 : value * 60;
+    }
+    
+    return null;
+  }
+  
+  function minutesToHMS(minutes) {
+    const totalSeconds = Math.max(0, Math.floor(minutes * 60));
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
+    return h + ":" + String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
+  }
+
+  // Setup bidirectional total planned time conversion
+  function setupTotalTimeConversion() {
+    const minutesInput = document.getElementById("total_planned_minutes");
+    const hmsInput = document.getElementById("total_planned_hms");
+    
+    if (!minutesInput || !hmsInput) return;
+    
+    // Initialize HMS input with current minutes value
+    if (minutesInput.value) {
+      hmsInput.value = minutesToHMS(parseFloat(minutesInput.value));
+    }
+    
+    // Minutes input changes -> update HMS
+    minutesInput.addEventListener("input", function() {
+      const minutes = parseFloat(this.value);
+      if (!isNaN(minutes) && minutes >= 0) {
+        hmsInput.value = minutesToHMS(minutes);
+      }
+    });
+    
+    // HMS input changes -> update minutes
+    hmsInput.addEventListener("input", function() {
+      const seconds = parseHMS(this.value);
+      if (seconds !== null) {
+        const minutes = seconds / 60;
+        minutesInput.value = minutes.toFixed(1);
+        // Trigger recalc to update the plan
+        recalcFrames();
+      }
+    });
+  }
+
+  // Setup everything
+  setupTotalTimeConversion();
+  
+  // Initialize channel H:M:S inputs
+  rows.forEach(row => {
+    const minInput = row.querySelector("input.channel-minutes");
+    const hmsInput = row.querySelector("input.channel-hms");
+    
+    if (minInput && hmsInput && minInput.value) {
+      hmsInput.value = minutesToHMS(parseFloat(minInput.value));
+    }
+  });
 
 
   if (globalExpInput && planTable) {

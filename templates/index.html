@@ -36,11 +36,11 @@
         </div>
         <div class="col-md-3 mb-2">
           <div class="small text-white-50">Remaining Total</div>
-          <div class="fw-bold">{{ tonight_pick.remaining_total }} min</div>
+          <div class="fw-bold">{{ tonight_pick.remaining_total|format_hms }} ({{ tonight_pick.remaining_total }} min)</div>
         </div>
         <div class="col-md-3 mb-2">
           <div class="small text-white-50">Tonight's Window</div>
-          <div class="fw-bold">{{ tonight_pick.window_minutes }} min</div>
+          <div class="fw-bold">{{ tonight_pick.window_minutes|format_hms }} ({{ tonight_pick.window_minutes }} min)</div>
         </div>
         <div class="col-md-3 mb-2">
           <div class="small text-white-50">Priority Score</div>
@@ -83,11 +83,11 @@
               <th>Type</th>
               <th>Palette</th>
               <th>Completion %</th>
-              <th>Planned (min)</th>
-              <th>Done (min)</th>
-              <th>Remaining (min)</th>
-              <th>Tonight Window (min)</th>
-              <th>Tonight Gain (min)</th>
+              <th>Planned Time</th>
+              <th>Done Time</th>
+              <th>Remaining Time</th>
+              <th>Tonight Window</th>
+              <th>Tonight Gain</th>
               <th>Priority</th>
               <th>Suggested Channel</th>
               <th style="width: 130px;">Actions</th>
@@ -116,11 +116,11 @@
                   {% endif %}
                 </td>
                 <td>{{ s.completion_pct }}%</td>
-                <td>{{ s.planned_total }}</td>
-                <td>{{ s.done_total }}</td>
-                <td>{{ s.remaining_total }}</td>
-                <td>{{ s.window_minutes }}</td>
-                <td>{{ s.best_tonight_minutes }}</td>
+                <td>{{ s.planned_total|format_hms }} ({{ s.planned_total }} min)</td>
+                <td>{{ s.done_total|format_hms }} ({{ s.done_total }} min)</td>
+                <td>{{ s.remaining_total|format_hms }} ({{ s.remaining_total }} min)</td>
+                <td>{{ s.window_minutes|format_hms }} ({{ s.window_minutes }} min)</td>
+                <td>{{ s.best_tonight_minutes|format_hms }} ({{ s.best_tonight_minutes }} min)</td>
                 <td>{{ s.priority_score }}</td>
                 <td>
                   {% if s.suggested_channel %}

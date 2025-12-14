@@ -18,6 +18,7 @@ from astro_utils import (
 )
 
 from nina_integration import load_nina_template, build_nina_sequence_from_blocks
+from time_utils import register_time_filters, format_hms, parse_hms, hms_to_minutes
 from zoneinfo import ZoneInfo
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -32,6 +33,9 @@ app.config["SQLALCHEMY_DATABASE_URI"] = db_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
+
+# Register time formatting filters
+register_time_filters(app)
 
 # --- Uploads config ---------------------------------------------------------
 UPLOAD_FOLDER = os.environ.get("UPLOAD_FOLDER") or os.path.join(BASE_DIR, "uploads")
