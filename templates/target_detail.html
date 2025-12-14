@@ -85,10 +85,6 @@
                          placeholder="Minutes">
                   <span class="input-group-text">min</span>
                 </div>
-                <input id="total_planned_hms" class="form-control form-control-sm mt-1"
-                       type="text" placeholder="H:M:S format (e.g. 6:00:00)"
-                       title="Enter time in H:M:S format">
-                <small class="text-muted">{{ (plan_data.total_planned_minutes * 60) | format_hms }}</small>
               </div>
 
               <div class="col-md-4 mb-2">
@@ -249,7 +245,7 @@
           <p class="mb-1">
             <strong>Total Window:</strong>
             {% if window_info.total_minutes is not none %}
-              {{ window_info.total_minutes }} minutes
+              {{ window_info.total_minutes|format_hms_from_minutes }} ({{ window_info.total_minutes }} minutes)
             {% else %}
               N/A
             {% endif %}
@@ -573,40 +569,7 @@ document.addEventListener("DOMContentLoaded", function () {
     return h + ":" + String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
   }
 
-  // Setup bidirectional total planned time conversion
-  function setupTotalTimeConversion() {
-    const minutesInput = document.getElementById("total_planned_minutes");
-    const hmsInput = document.getElementById("total_planned_hms");
-    
-    if (!minutesInput || !hmsInput) return;
-    
-    // Initialize HMS input with current minutes value
-    if (minutesInput.value) {
-      hmsInput.value = minutesToHMS(parseFloat(minutesInput.value));
-    }
-    
-    // Minutes input changes -> update HMS
-    minutesInput.addEventListener("input", function() {
-      const minutes = parseFloat(this.value);
-      if (!isNaN(minutes) && minutes >= 0) {
-        hmsInput.value = minutesToHMS(minutes);
-      }
-    });
-    
-    // HMS input changes -> update minutes
-    hmsInput.addEventListener("input", function() {
-      const seconds = parseHMS(this.value);
-      if (seconds !== null) {
-        const minutes = seconds / 60;
-        minutesInput.value = minutes.toFixed(1);
-        // Trigger recalc to update the plan
-        recalcFrames();
-      }
-    });
-  }
-
   // Setup everything
-  setupTotalTimeConversion();
   
   // Initialize channel H:M:S inputs
   rows.forEach(row => {
