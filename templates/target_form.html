@@ -39,7 +39,7 @@
           <input class="form-control" id="catalog_id" name="catalog_id"
                  value="{{ (target and target.catalog_id) or '' }}">
           <button class="btn btn-outline-light" type="button" id="btn-resolve">
-            Resolve RA/Dec
+            <i class="bi bi-search me-1"></i>Resolve RA/Dec
           </button>
         </div>
         <div class="form-text">
@@ -127,9 +127,15 @@
 
   <!-- SUBMIT BUTTONS -->
   <button class="btn btn-primary mt-2" type="submit">
-    {% if target %}Save{% else %}Create{% endif %}
+    {% if target %}
+      <i class="bi bi-floppy me-1"></i>Save
+    {% else %}
+      <i class="bi bi-plus-circle me-1"></i>Create
+    {% endif %}
   </button>
-  <a href="{{ url_for('index') }}" class="btn btn-secondary mt-2">Cancel</a>
+  <a href="{{ url_for('index') }}" class="btn btn-secondary mt-2">
+    <i class="bi bi-x-circle me-1"></i>Cancel
+  </a>
 </form>
 
 <!-- JAVASCRIPT FOR AUTO RESOLUTION -->
@@ -209,7 +215,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     btn.disabled = true;
-    btn.textContent = "Resolving...";
+    btn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Resolving...';
 
     try {
       const resp = await fetch(`/api/resolve?name=${encodeURIComponent(name)}`);
@@ -253,7 +259,7 @@ document.addEventListener("DOMContentLoaded", function () {
       alert("Connection error while resolving object name.");
     } finally {
       btn.disabled = false;
-      btn.textContent = "Resolve RA/Dec";
+      btn.innerHTML = '<i class="bi bi-search me-1"></i>Resolve RA/Dec';
     }
   });
 

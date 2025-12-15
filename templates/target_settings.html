@@ -36,8 +36,12 @@
       </div>
 
       <div class="d-flex gap-2">
-        <button type="submit" class="btn btn-primary">Save Target Settings</button>
-        <a href="{{ url_for('target_detail', target_id=target.id) }}" class="btn btn-outline-secondary">Cancel</a>
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-floppy me-1"></i>Save Target Settings
+        </button>
+        <a href="{{ url_for('target_detail', target_id=target.id) }}" class="btn btn-outline-secondary">
+          <i class="bi bi-arrow-left me-1"></i>Cancel
+        </a>
       </div>
     </form>
   </div>
@@ -73,7 +77,7 @@
         </p>
         
         <a href="{{ url_for('global_settings') }}" class="btn btn-outline-info btn-sm">
-          Edit Global Settings
+          <i class="bi bi-gear me-1"></i>Edit Global Settings
         </a>
       </div>
     </div>

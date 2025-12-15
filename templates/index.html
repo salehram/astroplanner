@@ -4,7 +4,7 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h1 class="h3 mb-0">Astro Planner</h1>
   <a href="{{ url_for('new_target') }}" class="btn btn-primary btn-sm">
-    + New Target
+    <i class="bi bi-plus-circle me-1"></i>New Target
   </a>
 </div>
 
@@ -134,13 +134,13 @@
                   <div class="d-flex gap-1">
                     <a href="{{ url_for('target_detail', target_id=t.id) }}"
                        class="btn btn-outline-light btn-sm">
-                      View
+                      <i class="bi bi-eye me-1"></i>View
                     </a>
                     <form method="post"
                           action="{{ url_for('delete_target', target_id=t.id) }}"
                           onsubmit="return confirm('Delete target {{ t.name }} and all its data?');">
                       <button class="btn btn-outline-danger btn-sm" type="submit">
-                        Del
+                        <i class="bi bi-trash"></i>
                       </button>
                     </form>
                   </div>

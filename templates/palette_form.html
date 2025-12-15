@@ -73,9 +73,15 @@
   <!-- Submit -->
   <div class="mt-4">
     <button type="submit" class="btn btn-primary">
-      {% if palette %}Update Palette{% else %}Create Palette{% endif %}
+      {% if palette %}
+        <i class="bi bi-floppy me-1"></i>Update Palette
+      {% else %}
+        <i class="bi bi-plus-circle me-1"></i>Create Palette
+      {% endif %}
     </button>
-    <a href="{{ url_for('palette_list') }}" class="btn btn-secondary">Cancel</a>
+    <a href="{{ url_for('palette_list') }}" class="btn btn-secondary">
+      <i class="bi bi-x-circle me-1"></i>Cancel
+    </a>
   </div>
 </form>
 

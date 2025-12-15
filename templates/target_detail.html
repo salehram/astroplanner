@@ -36,13 +36,19 @@
   </div>
   <div class="d-flex gap-2">
     <a href="{{ url_for('edit_target', target_id=target.id) }}"
-       class="btn btn-outline-light btn-sm">Edit</a>
+       class="btn btn-outline-light btn-sm">
+      <i class="bi bi-pencil me-1"></i>Edit
+    </a>
     <a href="{{ url_for('target_settings', target_id=target.id) }}"
-       class="btn btn-outline-info btn-sm">Settings</a>
+       class="btn btn-outline-info btn-sm">
+      <i class="bi bi-gear me-1"></i>Settings
+    </a>
     <form method="post"
           action="{{ url_for('delete_target', target_id=target.id) }}"
           onsubmit="return confirm('Delete target {{ target.name }} and all its data?');">
-      <button class="btn btn-outline-danger btn-sm" type="submit">Delete</button>
+      <button class="btn btn-outline-danger btn-sm" type="submit">
+        <i class="bi bi-trash me-1"></i>Delete
+      </button>
     </form>
   </div>
 </div>
@@ -62,7 +68,9 @@
               </option>
             {% endfor %}
           </select>
-          <button class="btn btn-sm btn-outline-light" type="submit">New Plan</button>
+          <button class="btn btn-sm btn-outline-light" type="submit">
+            <i class="bi bi-plus-circle me-1"></i>New Plan
+          </button>
         </form>
       </div>
 
@@ -179,13 +187,13 @@
             </div>
 
             <button class="btn btn-outline-light btn-sm mt-3" type="submit">
-              Save Plan
+              <i class="bi bi-floppy me-1"></i>Save Plan
             </button>
 
             <button class="btn btn-outline-info btn-sm mt-3"
                     formaction="{{ url_for('export_nina_sequence', target_id=target.id) }}"
                     formmethod="post">
-              Export NINA Sequence (remaining subs)
+              <i class="bi bi-download me-1"></i>Export NINA Sequence (remaining subs)
             </button>
 
           </form>
@@ -325,7 +333,9 @@
             <input class="form-control" name="notes">
           </div>
 
-          <button class="btn btn-primary btn-sm" type="submit">Add Progress</button>
+          <button class="btn btn-primary btn-sm" type="submit">
+            <i class="bi bi-plus-circle me-1"></i>Add Progress
+          </button>
         </form>
       </div>
     </div>
@@ -381,7 +391,9 @@
             <label class="form-label">Upload final processed image</label>
             <input class="form-control" type="file" name="final_image" accept="image/*">
           </div>
-          <button class="btn btn-outline-light btn-sm" type="submit">Upload / Replace</button>
+          <button class="btn btn-outline-light btn-sm" type="submit">
+            <i class="bi bi-upload me-1"></i>Upload / Replace
+          </button>
         </form>
       </div>
 
