@@ -12,9 +12,45 @@
     href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
     rel="stylesheet"
   >
+  <style>
+    .navbar-milkyway {
+      background-image: url("{{ url_for('static', filename='stars-1837306_1920.jpg') }}");
+      background-size: cover;
+      background-position: center center;
+      background-repeat: no-repeat;
+      position: relative;
+    }
+    
+    .navbar-milkyway::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.4);
+      z-index: 1;
+    }
+    
+    .navbar-milkyway .container-fluid {
+      position: relative;
+      z-index: 2;
+    }
+    
+    .navbar-milkyway .navbar-brand,
+    .navbar-milkyway .nav-link {
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+      font-weight: 500;
+    }
+    
+    .navbar-milkyway .nav-link:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+    }
+  </style>
 </head>
 <body class="bg-dark text-light">
-<nav class="navbar navbar-expand-lg navbar-dark bg-black mb-4">
+<nav class="navbar navbar-expand-lg navbar-dark navbar-milkyway mb-4">
   <div class="container-fluid">
     <a class="navbar-brand" href="{{ url_for('index') }}">{{ app_name }}</a>
     <div class="navbar-nav ms-auto">
