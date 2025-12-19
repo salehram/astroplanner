@@ -416,8 +416,8 @@ document.addEventListener("DOMContentLoaded", function () {
   if (urlParams.get('_refresh') === 'true') {
     // Remove the parameter from URL to clean it up
     window.history.replaceState({}, document.title, window.location.pathname);
-    // Force refresh of window data
-    refreshWindowData();
+    // Simple page reload to get fresh data
+    window.location.reload();
   }
 
   const tonightWindowMinutes = planTable
@@ -696,8 +696,8 @@ document.addEventListener("DOMContentLoaded", function () {
     if (!altitudeData || !altitudeData.length) return;
 
     const minAltitude = {{ window_info.min_altitude_deg|tojson|safe }};
-    const startTime = "{{ window_info.start_time_local }}";
-    const endTime = "{{ window_info.end_time_local }}";
+    const startTime = "{{ window_info.start_time_local }}".split(' ')[1].slice(0, 5); // Extract HH:MM
+    const endTime = "{{ window_info.end_time_local }}".split(' ')[1].slice(0, 5); // Extract HH:MM
 
     const ctx = canvas.getContext("2d");
     
@@ -708,7 +708,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const backgroundColors = altitudeData.map(point => {
       const timeLabel = point.time_label;
       // Check if this time point is within the imaging window
-      const isWithinWindow = timeLabel >= startTime.slice(0, 5) && timeLabel <= endTime.slice(0, 5);
+      const isWithinWindow = timeLabel >= startTime && timeLabel <= endTime;
       return isWithinWindow ? 'rgba(76, 175, 80, 0.1)' : 'rgba(158, 158, 158, 0.1)';
     });
 
@@ -760,7 +760,7 @@ document.addEventListener("DOMContentLoaded", function () {
             callbacks: {
               afterBody: function(tooltipItems) {
                 const timeLabel = tooltipItems[0].label;
-                const isWithinWindow = timeLabel >= startTime.slice(0, 5) && timeLabel <= endTime.slice(0, 5);
+                const isWithinWindow = timeLabel >= startTime && timeLabel <= endTime;
                 return isWithinWindow ? 'Within imaging window' : 'Outside imaging window';
               }
             }
@@ -792,7 +792,7 @@ document.addEventListener("DOMContentLoaded", function () {
               color: function(context) {
                 const timeLabel = altitudeData[context.index]?.time_label;
                 if (timeLabel) {
-                  const isWithinWindow = timeLabel >= startTime.slice(0, 5) && timeLabel <= endTime.slice(0, 5);
+                  const isWithinWindow = timeLabel >= startTime && timeLabel <= endTime;
                   return isWithinWindow ? 'rgba(76, 175, 80, 0.2)' : 'rgba(158, 158, 158, 0.1)';
                 }
                 return 'rgba(0, 0, 0, 0.1)';
@@ -824,10 +824,10 @@ document.addEventListener("DOMContentLoaded", function () {
           // Find the start and end indices of the imaging window
           altitudeData.forEach((point, index) => {
             const timeLabel = point.time_label;
-            if (timeLabel >= startTime.slice(0, 5) && startIndex === -1) {
+            if (timeLabel >= startTime && startIndex === -1) {
               startIndex = index;
             }
-            if (timeLabel <= endTime.slice(0, 5)) {
+            if (timeLabel <= endTime) {
               endIndex = index;
             }
           });
@@ -876,7 +876,7 @@ document.addEventListener("DOMContentLoaded", function () {
     // Update background colors for window shading
     const backgroundColors = altitudeData.map(point => {
       const timeLabel = point.time_label;
-      const isWithinWindow = timeLabel >= startTime.slice(0, 5) && timeLabel <= endTime.slice(0, 5);
+      const isWithinWindow = timeLabel >= startTime && timeLabel <= endTime;
       return isWithinWindow ? 'rgba(76, 175, 80, 0.1)' : 'rgba(158, 158, 158, 0.1)';
     });
     

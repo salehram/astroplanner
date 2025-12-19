@@ -643,6 +643,7 @@ def target_detail(target_id):
     # Observer location and settings from config
     lat, lon, elev = get_observer_location()
     packup_time = parse_time_str(get_effective_packup_time(target))
+    effective_min_alt = get_effective_min_altitude(target)
 
     window_info = compute_target_window(
         ra_hours=target.ra_hours,
@@ -651,7 +652,7 @@ def target_detail(target_id):
         longitude_deg=lon,
         elevation_m=elev,
         packup_time_local=packup_time,
-        min_altitude_deg=get_effective_min_altitude(target),
+        min_altitude_deg=effective_min_alt,
     )
 
     # Progress: accumulate minutes and seconds per channel
@@ -1134,8 +1135,8 @@ def target_settings(target_id):
             db.session.rollback()
             flash(f"Error updating target settings: {e}", "error")
         
-        # Force recomputation by adding cache-busting parameter
-        return redirect(url_for("target_detail", target_id=target_id, _refresh=True))
+        # Simple redirect back to target detail - window will be recalculated
+        return redirect(url_for("target_detail", target_id=target_id))
     
     return render_template("target_settings.html", target=target, global_config=global_config)
 
