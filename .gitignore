@@ -3,6 +3,10 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+# SQLite database files
+astroplanner.db
+*.db
+
 # C extensions
 *.so
 
