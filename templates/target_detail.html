@@ -410,10 +410,61 @@ document.addEventListener("DOMContentLoaded", function () {
   const globalExpInput = document.getElementById("plan_sub_exposure");
   const planTable = document.getElementById("plan-table");
   const rows = document.querySelectorAll("tr.plan-row");
+  
+  // Check if we need to refresh (coming from settings update)
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('_refresh') === 'true') {
+    // Remove the parameter from URL to clean it up
+    window.history.replaceState({}, document.title, window.location.pathname);
+    // Force refresh of window data
+    refreshWindowData();
+  }
 
   const tonightWindowMinutes = planTable
     ? parseFloat(planTable.dataset.tonightMinutes || "0") || 0
     : 0;
+    
+  function refreshWindowData() {
+    // Get updated window information from server
+    fetch(`/api/target/{{ target.id }}/window`)
+      .then(response => response.json())
+      .then(data => {
+        if (data.deps_available) {
+          // Update window information display
+          updateWindowDisplay(data);
+          // Refresh altitude chart
+          updateAltitudeChart(data);
+        }
+      })
+      .catch(error => {
+        console.error('Error refreshing window data:', error);
+      });
+  }
+  
+  function updateWindowDisplay(windowInfo) {
+    // Update various text elements with new window info
+    const elements = {
+      'sunset-local': windowInfo.sunset_local,
+      'dark-start-local': windowInfo.dark_start_local,
+      'dark-end-local': windowInfo.dark_end_local,
+      'meridian-local': windowInfo.meridian_local,
+      'effective-start-local': windowInfo.start_time_local,
+      'effective-end-local': windowInfo.end_time_local,
+      'total-window': `${formatHMS(windowInfo.total_minutes * 60)} (${windowInfo.total_minutes} minutes)`,
+      'min-altitude': windowInfo.min_altitude_deg + '°',
+      'mid-altitude': (windowInfo.midpoint_altitude_deg !== null ? windowInfo.midpoint_altitude_deg + '°' : 'N/A')
+    };
+    
+    // Update elements that exist
+    Object.entries(elements).forEach(([id, value]) => {
+      const element = document.getElementById(id);
+      if (element) {
+        element.textContent = value;
+      }
+    });
+  }
+  
+  let altitudeChart; // Store chart instance globally
 
   function formatHMS(totalSeconds) {
     totalSeconds = Math.max(0, Math.floor(totalSeconds));
@@ -661,7 +712,7 @@ document.addEventListener("DOMContentLoaded", function () {
       return isWithinWindow ? 'rgba(76, 175, 80, 0.1)' : 'rgba(158, 158, 158, 0.1)';
     });
 
-    new Chart(ctx, {
+    altitudeChart = new Chart(ctx, {
       type: "line",
       data: {
         labels: altitudeData.map(p => p.time_label),
@@ -806,6 +857,31 @@ document.addEventListener("DOMContentLoaded", function () {
         }
       }]
     });
+  }
+  
+  function updateAltitudeChart(windowInfo) {
+    if (!altitudeChart || !windowInfo.altitude_profile) return;
+    
+    const altitudeData = windowInfo.altitude_profile;
+    const minAltitude = windowInfo.min_altitude_deg;
+    const startTime = windowInfo.start_time_local;
+    const endTime = windowInfo.end_time_local;
+    
+    // Update chart data
+    altitudeChart.data.labels = altitudeData.map(p => p.time_label);
+    altitudeChart.data.datasets[0].data = altitudeData.map(p => p.alt_deg);
+    altitudeChart.data.datasets[1].data = altitudeData.map(() => minAltitude);
+    altitudeChart.data.datasets[1].label = `Min Altitude (${minAltitude}°)`;
+    
+    // Update background colors for window shading
+    const backgroundColors = altitudeData.map(point => {
+      const timeLabel = point.time_label;
+      const isWithinWindow = timeLabel >= startTime.slice(0, 5) && timeLabel <= endTime.slice(0, 5);
+      return isWithinWindow ? 'rgba(76, 175, 80, 0.1)' : 'rgba(158, 158, 158, 0.1)';
+    });
+    
+    // Update the chart
+    altitudeChart.update('none'); // Use 'none' for immediate update without animation
   }
 });
 </script>

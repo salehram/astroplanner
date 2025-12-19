@@ -1064,6 +1064,28 @@ def api_palette_recommendation():
     })
 
 
+@app.route("/api/target/<int:target_id>/window", methods=["GET"])
+def api_target_window(target_id):
+    """Get real-time window calculation for a target."""
+    target = Target.query.get_or_404(target_id)
+    
+    # Observer location and settings from config
+    lat, lon, elev = get_observer_location()
+    packup_time = parse_time_str(get_effective_packup_time(target))
+    
+    window_info = compute_target_window(
+        ra_hours=target.ra_hours,
+        dec_deg=target.dec_deg,
+        latitude_deg=lat,
+        longitude_deg=lon,
+        elevation_m=elev,
+        packup_time_local=packup_time,
+        min_altitude_deg=get_effective_min_altitude(target),
+    )
+    
+    return jsonify(window_info)
+
+
 @app.route("/settings", methods=["GET", "POST"])
 def global_settings():
     """Manage global configuration settings."""
@@ -1081,7 +1103,7 @@ def global_settings():
         
         try:
             db.session.commit()
-            flash("Global settings updated successfully!", "success")
+            flash("Global settings updated successfully! All targets will use new defaults.", "success")
         except Exception as e:
             db.session.rollback()
             flash(f"Error updating settings: {e}", "error")
@@ -1107,12 +1129,13 @@ def target_settings(target_id):
         
         try:
             db.session.commit()
-            flash("Target settings updated successfully!", "success")
+            flash("Target settings updated successfully! Window recalculated.", "success")
         except Exception as e:
             db.session.rollback()
             flash(f"Error updating target settings: {e}", "error")
-            
-        return redirect(url_for("target_detail", target_id=target_id))
+        
+        # Force recomputation by adding cache-busting parameter
+        return redirect(url_for("target_detail", target_id=target_id, _refresh=True))
     
     return render_template("target_settings.html", target=target, global_config=global_config)
 
