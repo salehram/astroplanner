@@ -371,6 +371,85 @@ Not started.
 
 ---
 
+## 🟡 12. Comprehensive User Guide & Documentation (Pending)
+### Summary
+Create comprehensive documentation and user guide to help new users get started with AstroPlanner and understand all available features and workflows.
+
+### Required Features
+- **Getting Started Guide**: Step-by-step tutorial for first-time users
+- **Feature Documentation**: Comprehensive documentation of all features and capabilities
+- **Workflow Guides**: Common astrophotography planning workflows and best practices
+- **Configuration Documentation**: Detailed setup and configuration instructions
+- **Integration Guides**: How to integrate with NINA and other astrophotography software
+- **Troubleshooting**: Common issues and solutions
+- **FAQ Section**: Frequently asked questions and answers
+
+### Planned Documentation Structure
+- **Quick Start Guide**:
+  - Installation and initial setup
+  - Creating your first target
+  - Planning your first imaging session
+  - Recording imaging progress
+- **Core Features Documentation**:
+  - Target management and planning
+  - Palette creation and customization  
+  - Global and per-target configuration
+  - Altitude charts and time windows
+  - NINA export functionality
+  - Imaging logs and session tracking
+- **Advanced Workflows**:
+  - Multi-target session planning
+  - Filter change optimization
+  - Progress tracking strategies
+  - Data analysis using imaging logs
+- **Technical Documentation**:
+  - Observer location setup
+  - Timezone configuration
+  - Database management
+  - Custom palette creation
+  - NINA template customization
+- **Integration Guides**:
+  - NINA Advanced Sequencer integration
+  - Export workflows and best practices
+  - Equipment setup considerations
+- **Troubleshooting & Support**:
+  - Common configuration issues
+  - Database troubleshooting
+  - Performance optimization
+  - FAQ and community resources
+
+### Implementation Plan
+- **Documentation Website**: Dedicated documentation site or integrated help system
+- **Interactive Tutorials**: Step-by-step guided tours within the application
+- **Video Guides**: Screen recordings demonstrating key workflows
+- **Example Scenarios**: Real-world use cases and example configurations
+- **Community Contributions**: Framework for user-contributed guides and tips
+
+### Technical Implementation Options
+- **Integrated Help System**: Built-in help pages within the Flask application
+- **Static Site Generator**: Separate documentation site (MkDocs, GitBook, etc.)
+- **Interactive Tooltips**: Contextual help and tooltips throughout the UI
+- **Example Data**: Sample targets and configurations for demonstration
+- **Documentation API**: Programmatic access to help content
+
+### User Benefits
+- **Reduced Learning Curve**: New users can quickly understand and utilize all features
+- **Better Feature Discovery**: Users learn about advanced features they might otherwise miss
+- **Improved Workflows**: Guidance on best practices and optimal workflows
+- **Self-Service Support**: Users can find answers without external support
+- **Community Building**: Shared knowledge base and user contributions
+
+### Success Metrics
+- Reduced time-to-first-successful-session for new users
+- Increased feature utilization across the user base
+- Reduced support requests for basic functionality
+- Positive user feedback on documentation quality and completeness
+
+### Status  
+**Feature concept added to roadmap - not yet started.**
+
+---
+
 # Summary Table
 
 | Feature | Status | Notes |
@@ -387,6 +466,7 @@ Not started.
 | Session recommendation engine | 🟡 Pending | AI-driven session optimization |
 | PostgreSQL database support | 🟡 Pending | Cloud deployment readiness |
 | Automatic recomputation | 🟡 Pending | After changes to settings |
+| Comprehensive user guide & documentation | 🟡 Pending | Getting started guides, tutorials, and feature documentation |
 
 ---
 
@@ -399,6 +479,7 @@ Now that the core planning features are complete (time formatting, palette manag
 - Machine learning to adapt to user behavior and local conditions
 
 Alternative focus areas:
+- **12. Comprehensive User Guide & Documentation** - Getting started guides, tutorials, and feature documentation to improve user onboarding
 - **10.5. PostgreSQL Database Support** - Enable cloud deployment on serverless platforms (Cloud Run, Kubernetes)
 - **11. Automatic Recomputation** - Dynamic updates when settings change
 - **Additional Export Formats** - More observatory software integrations
