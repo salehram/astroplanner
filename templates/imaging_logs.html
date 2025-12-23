@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% block title %}Imaging Logs{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2>
+        <i class="bi bi-journal-text me-2"></i>Imaging Logs
+      </h2>
+    </div>
+  </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+  <div class="col-md-4">
+    <div class="card bg-primary text-light">
+      <div class="card-body text-center">
+        <h3 class="mb-1">{{ stats.imaging_days }}</h3>
+        <small class="text-light">Imaging Days</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card bg-success text-light">
+      <div class="card-body text-center">
+        <h3 class="mb-1">{{ stats.targets_imaged }}</h3>
+        <small class="text-light">Targets Imaged</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card bg-info text-light">
+      <div class="card-body text-center">
+        <h3 class="mb-1">{{ stats.total_sessions }}</h3>
+        <small class="text-light">Total Sessions</small>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Imaging Sessions by Date -->
+<div class="row">
+  <div class="col">
+    {% if grouped_sessions %}
+      {% for date, sessions in grouped_sessions %}
+        <div class="card bg-secondary text-light mb-4">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+              <i class="bi bi-calendar-date me-2"></i>
+              {{ date.strftime('%A, %B %d, %Y') }}
+            </h5>
+            <span class="badge bg-primary">{{ sessions|length }} session(s)</span>
+          </div>
+          
+          <div class="card-body">
+            {% set targets_by_session = {} %}
+            {% for session in sessions %}
+              {% if session.target.name not in targets_by_session %}
+                {% set _ = targets_by_session.update({session.target.name: []}) %}
+              {% endif %}
+              {% set _ = targets_by_session[session.target.name].append(session) %}
+            {% endfor %}
+            
+            <div class="row">
+              {% for target_name, target_sessions in targets_by_session.items() %}
+                <div class="col-lg-6 mb-3">
+                  <div class="border rounded p-3 bg-dark">
+                    <h6 class="text-primary mb-2">
+                      <a href="{{ url_for('target_detail', target_id=target_sessions[0].target.id) }}" 
+                         class="text-decoration-none text-primary">
+                        <i class="bi bi-star me-1"></i>{{ target_name }}
+                      </a>
+                    </h6>
+                    
+                    {% for session in target_sessions %}
+                      <div class="d-flex justify-content-between align-items-center mb-2 pb-2 {% if not loop.last %}border-bottom border-secondary{% endif %}">
+                        <div>
+                          <span class="badge bg-warning text-dark me-2">{{ session.channel }}</span>
+                          <small>
+                            {{ session.sub_count }}x {{ session.sub_exposure_seconds }}s
+                            <span class="text-muted">
+                              ({{ ((session.sub_count * session.sub_exposure_seconds) / 60) | round(1) }}m)
+                            </span>
+                          </small>
+                        </div>
+                        {% if session.notes %}
+                          <small class="text-muted" title="{{ session.notes }}">
+                            <i class="bi bi-chat-quote"></i>
+                          </small>
+                        {% endif %}
+                      </div>
+                    {% endfor %}
+                    
+                    <!-- Target summary for the day -->
+                    {% set total_minutes = [] %}
+                    {% for session in target_sessions %}
+                      {% set _ = total_minutes.append((session.sub_count * session.sub_exposure_seconds) / 60) %}
+                    {% endfor %}
+                    <small class="text-success">
+                      <strong>Total: {{ total_minutes | sum | round(1) }} minutes</strong>
+                    </small>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+            
+            <!-- Daily summary -->
+            {% set daily_total = [] %}
+            {% for session in sessions %}
+              {% set _ = daily_total.append((session.sub_count * session.sub_exposure_seconds) / 60) %}
+            {% endfor %}
+            
+            <div class="mt-3 pt-3 border-top border-secondary">
+              <div class="d-flex justify-content-between align-items-center">
+                <span class="text-light">
+                  <i class="bi bi-clock me-1"></i>Daily Total:
+                </span>
+                <strong class="text-success">
+                  {{ daily_total | sum | round(1) }} minutes
+                  {% if daily_total | sum >= 60 %}
+                    ({{ (daily_total | sum / 60) | round(2) }} hours)
+                  {% endif %}
+                </strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="card bg-secondary text-light">
+        <div class="card-body text-center py-5">
+          <i class="bi bi-journal-x display-4 text-muted mb-3"></i>
+          <h5 class="text-muted">No imaging sessions recorded yet</h5>
+          <p class="text-muted mb-4">Start adding imaging progress to your targets to see your imaging history here.</p>
+          <a href="{{ url_for('index') }}" class="btn btn-primary">
+            <i class="bi bi-star me-1"></i>View Targets
+          </a>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+{% if grouped_sessions %}
+<!-- Monthly Summary -->
+<div class="row mt-5">
+  <div class="col">
+    <div class="card bg-secondary text-light">
+      <div class="card-header">
+        <h5 class="mb-0">
+          <i class="bi bi-calendar3 me-2"></i>Monthly Activity
+        </h5>
+      </div>
+      <div class="card-body">
+        {% set monthly_stats = {} %}
+        {% for date, sessions in grouped_sessions %}
+          {% set month_key = date.strftime('%Y-%m') %}
+          {% if month_key not in monthly_stats %}
+            {% set _ = monthly_stats.update({month_key: {'days': 0, 'sessions': 0, 'minutes': 0}}) %}
+          {% endif %}
+          {% set _ = monthly_stats[month_key].update({'days': monthly_stats[month_key]['days'] + 1}) %}
+          {% set _ = monthly_stats[month_key].update({'sessions': monthly_stats[month_key]['sessions'] + sessions|length}) %}
+          {% for session in sessions %}
+            {% set session_minutes = (session.sub_count * session.sub_exposure_seconds) / 60 %}
+            {% set _ = monthly_stats[month_key].update({'minutes': monthly_stats[month_key]['minutes'] + session_minutes}) %}
+          {% endfor %}
+        {% endfor %}
+        
+        <div class="row">
+          {% for month, stats in monthly_stats.items() | reverse %}
+            <div class="col-lg-4 col-md-6 mb-3">
+              <div class="border rounded p-3 bg-dark">
+                <h6 class="text-info mb-2">
+                  {{ month | replace('-', '/') }}
+                </h6>
+                <div class="small">
+                  <div class="d-flex justify-content-between">
+                    <span>Imaging Days:</span>
+                    <span class="text-primary">{{ stats.days }}</span>
+                  </div>
+                  <div class="d-flex justify-content-between">
+                    <span>Sessions:</span>
+                    <span class="text-success">{{ stats.sessions }}</span>
+                  </div>
+                  <div class="d-flex justify-content-between">
+                    <span>Total Time:</span>
+                    <span class="text-warning">{{ stats.minutes | round(1) }}m</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

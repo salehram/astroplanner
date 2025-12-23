@@ -35,7 +35,8 @@ app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-key")
 def inject_version():
     return {
         'app_version': APP_VERSION,
-        'app_name': APP_NAME
+        'app_name': APP_NAME,
+        'datetime': datetime
     }
 
 # --- Database config (SQLite by default, override with DATABASE_URL) ---------
@@ -214,7 +215,7 @@ class ImagingSession(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     target_id = db.Column(db.Integer, db.ForeignKey("targets.id"), nullable=False)
 
-    date = db.Column(db.Date, nullable=False, default=datetime.utcnow)
+    date = db.Column(db.Date, nullable=False, default=datetime.now().date)
     channel = db.Column(db.String(16), nullable=False)  # H, O, S, L, R, G, B
     sub_exposure_seconds = db.Column(db.Integer, nullable=False)
     sub_count = db.Column(db.Integer, nullable=False)
@@ -966,6 +967,14 @@ def add_progress(target_id):
     sub_exposure_seconds = int(request.form.get("sub_exposure_seconds"))
     sub_count = int(request.form.get("sub_count"))
     notes = request.form.get("notes")
+    
+    # Parse the imaging date
+    imaging_date_str = request.form.get("imaging_date")
+    if imaging_date_str:
+        from datetime import datetime as dt
+        imaging_date = dt.strptime(imaging_date_str, '%Y-%m-%d').date()
+    else:
+        imaging_date = datetime.now().date()
 
     session = ImagingSession(
         target_id=target.id,
@@ -973,12 +982,49 @@ def add_progress(target_id):
         sub_exposure_seconds=sub_exposure_seconds,
         sub_count=sub_count,
         notes=notes,
+        date=imaging_date,
     )
     db.session.add(session)
     db.session.commit()
 
     flash("Progress added.", "success")
     return redirect(url_for("target_detail", target_id=target.id))
+
+
+@app.route("/imaging-logs")
+def imaging_logs():
+    """Display all imaging sessions grouped by date to track imaging days."""
+    sessions = (
+        ImagingSession.query
+        .join(Target)
+        .order_by(ImagingSession.date.desc(), ImagingSession.id.desc())
+        .all()
+    )
+    
+    # Group sessions by date
+    from collections import defaultdict
+    sessions_by_date = defaultdict(list)
+    
+    for session in sessions:
+        sessions_by_date[session.date].append(session)
+    
+    # Convert to list of tuples for template
+    grouped_sessions = sorted(sessions_by_date.items(), key=lambda x: x[0], reverse=True)
+    
+    # Calculate some statistics
+    total_sessions = len(sessions)
+    unique_dates = len(sessions_by_date)
+    unique_targets = len(set(session.target_id for session in sessions))
+    
+    stats = {
+        'total_sessions': total_sessions,
+        'imaging_days': unique_dates,
+        'targets_imaged': unique_targets
+    }
+    
+    return render_template("imaging_logs.html", 
+                         grouped_sessions=grouped_sessions,
+                         stats=stats)
 
 
 @app.route("/target/<int:target_id>/upload-final", methods=["POST"])
