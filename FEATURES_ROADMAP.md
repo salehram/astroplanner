@@ -171,6 +171,7 @@ Database-driven palette management system allowing custom palettes beyond the ha
 - Shade the region corresponding to the valid imaging window:
   - Inside window: highlighted ✅
   - Outside window: dimmed ✅
+- Add current time marker for real-time session planning ✅
 
 ### Completed
 - **Threshold Line**: Added dashed red line showing minimum altitude threshold with legend
@@ -186,13 +187,78 @@ Database-driven palette management system allowing custom palettes beyond the ha
   - Better color scheme with blue altitude curve and red threshold
   - Responsive design with improved hover interactions
   - Custom Chart.js plugin for background shading
+- **Real-Time Current Time Marker**: 
+  - Orange vertical line showing current time position on chart
+  - "Now" label for immediate time reference
+  - Smart time interpolation between data points
+  - Auto-refresh every minute to stay current
+  - Day rollover support for midnight transitions
+  - Integration with chart legend
 
 ### Status  
 **✅ Fully implemented and working.**
 
 ---
 
-## 🟡 9. Session Recommendation Engine with AI-Driven Logic (Pending)
+## ✅ 9. Comprehensive Imaging Logs & Session Tracking
+### Summary
+Complete imaging session tracking and progress logging system to track astrophotography outings and monitor progress across all targets over time.
+
+### Required Features
+- **Global Imaging Logs**: Comprehensive view of all imaging sessions across all targets
+- **Target-Specific Progress**: Individual target imaging history and progress tracking
+- **Session Management**: Enhanced progress tracking with date selection for backdating sessions
+- **Statistics & Analytics**: Daily, monthly, and overall imaging statistics
+- **Progress Visualization**: Charts and summaries showing imaging activity patterns
+
+### Completed
+- **Imaging Logs Page**: 
+  - Dedicated `/imaging-logs` route with comprehensive session view
+  - Sessions grouped chronologically by imaging date
+  - Statistics dashboard showing total imaging days, targets imaged, and session counts
+  - Monthly activity summaries with time tracking
+  - Navigation integration in main header
+- **Enhanced Session Tracking**:
+  - Date field added to "Add Imaging Progress" form
+  - Support for backdating sessions to record historical data  
+  - Improved form layout with date in separate row
+  - Fixed database date handling for proper date storage
+- **Target-Specific Progress Views**:
+  - Individual target imaging history on target detail pages
+  - Sessions grouped by date with daily summaries
+  - Channel-based progress tracking with time calculations
+  - Notes preview with truncation and tooltips
+  - Quick link to global imaging logs
+- **Statistics & Analytics**:
+  - Daily total time calculations per imaging session
+  - Monthly activity breakdowns showing days, sessions, and total time
+  - Target-specific statistics (total sessions, imaging days, total time)
+  - Visual progress indicators and summary cards
+- **Data Management**:
+  - Enhanced ImagingSession model with proper date handling
+  - Efficient database queries for session grouping and statistics
+  - Template context improvements for consistent date formatting
+
+### Technical Implementation
+- **Database Enhancements**: Fixed date field handling in ImagingSession model
+- **Route Management**: New `/imaging-logs` route with grouped session queries
+- **Template System**: New `imaging_logs.html` template with responsive design
+- **JavaScript Enhancements**: Maintained existing progress calculation functionality
+- **UI/UX Improvements**: Bootstrap-based responsive design with color-coded statistics
+
+### User Benefits
+- **Session Tracking**: See exactly which days you went out for astrophotography
+- **Progress Monitoring**: Track progress on individual targets over time
+- **Historical Data**: Backdate sessions to build comprehensive imaging history
+- **Analytics**: Understand imaging patterns and productivity trends
+- **Planning**: Use historical data to inform future session planning
+
+### Status  
+**✅ Fully implemented and working.**
+
+---
+
+## 🟡 10. Session Recommendation Engine with AI-Driven Logic (Pending)
 ### Summary
 Implement an intelligent session recommendation engine that uses AI/ML to optimize imaging sessions based on multiple factors and user preferences.
 
@@ -229,7 +295,7 @@ Implement an intelligent session recommendation engine that uses AI/ML to optimi
 
 ---
 
-## 🟡 9.5. PostgreSQL Database Support for Cloud Deployment (Pending)
+## 🟡 10.5. PostgreSQL Database Support for Cloud Deployment (Pending)
 ### Summary
 Add PostgreSQL database support to enable deployment on serverless platforms like Google Cloud Run, AWS Lambda, or Kubernetes clusters where SQLite's file-based approach is not suitable.
 
@@ -284,7 +350,7 @@ Add PostgreSQL database support to enable deployment on serverless platforms lik
 
 ---
 
-## 🟡 10. Automatic Recompute Pipeline (Pending)
+## 🟡 11. Automatic Recompute Pipeline (Pending)
 Any of the following should automatically trigger a full recomputation:
 - Changing pack-up time  
 - Changing altitude threshold  
@@ -316,7 +382,8 @@ Not started.
 | Global/per-target configuration | ✅ Done | Observer location, pack-up time, min altitude |
 | Palette management | ✅ Done | Database-driven with custom palette support |
 | Plan & Palette Enhancements | ✅ Done | H:M:S formatting and bidirectional frame/time inputs |
-| Altitude chart enhancements | ✅ Done | Threshold lines, window shading, enhanced interactivity |
+| Altitude chart enhancements | ✅ Done | Threshold lines, window shading, current time marker |
+| Imaging logs & session tracking | ✅ Done | Comprehensive progress tracking with analytics |
 | Session recommendation engine | 🟡 Pending | AI-driven session optimization |
 | PostgreSQL database support | 🟡 Pending | Cloud deployment readiness |
 | Automatic recomputation | 🟡 Pending | After changes to settings |
@@ -324,16 +391,16 @@ Not started.
 ---
 
 # Next Recommended Focus
-**9. Session Recommendation Engine** - AI-driven session optimization  
-Now that the core planning features are complete (time formatting, palette management, altitude visualization), the next major enhancement is implementing an intelligent session recommendation engine. This ambitious feature includes:
+**10. Session Recommendation Engine** - AI-driven session optimization  
+Now that the core planning features are complete (time formatting, palette management, altitude visualization, imaging logs), the next major enhancement is implementing an intelligent session recommendation engine. This ambitious feature includes:
 - Weather integration and forecasting
 - AI-driven target priority scoring based on multiple factors
 - Automatic session planning and filter switching recommendations
 - Machine learning to adapt to user behavior and local conditions
 
 Alternative focus areas:
-- **9.5. PostgreSQL Database Support** - Enable cloud deployment on serverless platforms (Cloud Run, Kubernetes)
-- **10. Automatic Recomputation** - Dynamic updates when settings change
+- **10.5. PostgreSQL Database Support** - Enable cloud deployment on serverless platforms (Cloud Run, Kubernetes)
+- **11. Automatic Recomputation** - Dynamic updates when settings change
 - **Additional Export Formats** - More observatory software integrations
 - **Mobile Responsiveness** - Enhanced mobile interface optimizations
 
