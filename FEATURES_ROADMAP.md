@@ -298,18 +298,43 @@ Major enhancements to the imaging progress tracking system, including automated 
 - **Real-time Updates**: All plan calculations update immediately when custom filters are added
 - **Database Compatibility**: Custom filter data stored consistently with existing plan structure
 
+### 10.6 NINA Export Compatibility & Filter Mapping
+- **Custom Filter Mapping**: Custom filters can be mapped to standard NINA filter wheel names for hardware compatibility
+- **Intelligent Export System**: NINA export uses mapped filter names instead of custom names for proper telescope integration
+- **Filter Dropdown Integration**: Custom filter form includes NINA filter mapping selection with all standard filter names
+- **Backward Compatibility**: Existing filters and custom filters without mapping continue to work normally
+- **Hardware Integration**: Seamless telescope filter wheel operation with custom filter workflows
+
+### 10.7 Form Validation & Auto-Save Optimization
+- **Selective Auto-Save Behavior**: Auto-save only applies to custom filter addition, not plan table modifications
+- **Manual Plan Saving**: Plan table changes require explicit "Save Plan" button for user control
+- **HTML5 Validation Fixes**: Resolved form validation blocking issues with hidden required fields
+- **User Experience**: Improved save behavior prevents unwanted auto-save while maintaining custom filter convenience
+- **Form Error Resolution**: Fixed validation conflicts that prevented legitimate form submissions
+
+### 10.8 UI Enhancements & Table Organization
+- **Column Reordering**: Improved logical flow by placing "Planned Frames" before "Completed Time" in plan table
+- **Collapsible Custom Filter Interface**: Space-efficient design with toggle button and chevron indicator
+- **Enhanced Visual Design**: Improved contrast and styling for better visibility and user experience
+- **Responsive Layout**: Optimized form layout and spacing for different screen sizes
+
 ### Technical Implementation
 - **Frontend**: Enhanced JavaScript calculation engine with `recalcFrames()` and `calculateCustomFilterValues()` functions
 - **Backend**: Updated Flask routes with proper decimal handling in `add_progress` and `update_plan` endpoints  
 - **Database**: Seamless integration with existing JSON plan structure for custom filter persistence
+- **NINA Integration**: Enhanced `nina_integration.py` with custom filter mapping support
+- **Form Handling**: Improved HTML5 validation management and selective auto-save implementation
 - **UI/UX**: Bootstrap-based responsive design with collapse functionality and improved accessibility
 
 ### User Benefits
 - **Simplified Workflow**: No need to manually type filter names - they're auto-populated from plans
 - **Flexible Planning**: Can add custom filters on-the-fly for HDR, experimental, or specialized imaging
 - **Accurate Calculations**: Real-time bidirectional calculations ensure plan accuracy
+- **NINA Hardware Integration**: Custom filters work seamlessly with telescope filter wheels through mapping system
 - **Improved Progress Tracking**: Enhanced progress logging with visible notes and better organization
-- **Space-Efficient Interface**: Collapsible custom filter form keeps UI clean when not needed
+- **Optimized User Control**: Selective auto-save prevents unwanted changes while maintaining convenience
+- **Better Data Organization**: Logical column ordering and space-efficient interface design
+- **Professional Workflow**: Enterprise-grade form validation and error handling
 
 ### Status  
 **✅ Fully implemented and working.**
