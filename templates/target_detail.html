@@ -118,8 +118,8 @@
                     <th>Planned (mins)</th>
                     <th>Planned (h:m:s)</th>
                     <th>Sub (s)</th>
-                    <th>Completed Time</th>
                     <th>Planned Frames</th>
+                    <th>Completed Time</th>
                     <th>Done Frames</th>
                     <th>Remaining Frames</th>
                     <th>Remaining Time</th>
@@ -161,17 +161,17 @@
                               value="{{ ch.sub_exposure_seconds or 300 }}">
                       </td>
 
-                      <!-- Completed minutes -->
-                      <td class="completed-minutes"
-                          data-done-seconds="{{ done_sec|default(0) }}">
-                        {{ "%.1f"|format(done) }}
-                      </td>
-
                       <!-- Planned frames (editable – drives minutes if you change it) -->
                       <td>
                         <input class="form-control form-control-sm planned-frames-input"
                               type="number" step="1" min="0"
                               value="">
+                      </td>
+
+                      <!-- Completed minutes -->
+                      <td class="completed-minutes"
+                          data-done-seconds="{{ done_sec|default(0) }}">
+                        {{ "%.1f"|format(done) }}
                       </td>
 
                       <!-- Done / remaining -->
