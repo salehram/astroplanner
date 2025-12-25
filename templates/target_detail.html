@@ -221,7 +221,7 @@
                       </div>
                       <div class="col-md-2">
                         <label class="form-label small fw-bold text-light">Maps to Filter <span class="text-danger">*</span></label>
-                        <select class="form-control form-control-sm" id="custom_channel_nina_filter" required>
+                        <select class="form-control form-control-sm" id="custom_channel_nina_filter">
                           <option value="">Select...</option>
                           <option value="H">H (H-Alpha)</option>
                           <option value="O">O (OIII)</option>
@@ -1519,12 +1519,18 @@ document.addEventListener("DOMContentLoaded", function () {
       totalMinutes += value;
     });
     
-    totalMinutesInput.value = totalMinutes.toFixed(1);
+    // Update the value without triggering events
+    const currentValue = totalMinutesInput.value;
+    const newValue = totalMinutes.toFixed(1);
     
-    // Also update the H:M:S field if it exists
-    const totalHmsInput = document.getElementById('total_planned_hms');
-    if (totalHmsInput) {
-      totalHmsInput.value = minutesToHMS(totalMinutes);
+    if (currentValue !== newValue) {
+      totalMinutesInput.value = newValue;
+      
+      // Also update the H:M:S field if it exists
+      const totalHmsInput = document.getElementById('total_planned_hms');
+      if (totalHmsInput) {
+        totalHmsInput.value = minutesToHMS(totalMinutes);
+      }
     }
   }
 
