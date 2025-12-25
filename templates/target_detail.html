@@ -87,7 +87,7 @@
                 <label class="form-label">Total Planned Time</label>
                 <div class="input-group input-group-sm">
                   <input id="total_planned_minutes" class="form-control"
-                         type="number" step="1" min="0"
+                         type="number" step="0.1" min="0"
                          name="total_planned_minutes"
                          value="{{ plan_data.total_planned_minutes }}"
                          placeholder="Minutes">
@@ -125,6 +125,7 @@
                     <th>Remaining Time</th>
                     <th>Remaining (h:m:s)</th>
                     <th>Status</th>
+                    <th style="width: 35px;"></th>
                   </tr>
                 </thead>
 
@@ -139,7 +140,7 @@
                       <!-- Planned minutes (editable) -->
                       <td>
                         <input class="form-control form-control-sm channel-minutes minutes-input"
-                              type="number" step="1" min="0"
+                              type="number" step="0.1" min="0"
                               name="ch_{{ ch.name }}_minutes"
                               value="{{ ch.planned_minutes }}"
                               title="Minutes">
@@ -155,7 +156,7 @@
                       <!-- Sub-exposure -->
                       <td>
                         <input class="form-control form-control-sm channel-subexp subexp-input"
-                              type="number" step="1" min="1"
+                              type="number" step="0.001" min="0.001"
                               name="ch_{{ ch.name }}_subexp"
                               value="{{ ch.sub_exposure_seconds or 300 }}">
                       </td>
@@ -179,12 +180,87 @@
                       <td class="remaining-minutes fw-bold">-</td>
                       <td class="remaining-hms fw-bold">-</td>
                       <td class="status-badge"></td>
+                      <td>
+                        <button type="button" class="btn btn-sm btn-outline-danger remove-filter-btn" 
+                                data-channel="{{ ch.name }}" title="Remove this filter">
+                          <i class="bi bi-trash"></i>
+                        </button>
+                      </td>
                     </tr>
                   {% endfor %}
                 </tbody>
 
               </table>
             </div>
+
+            <!-- Add Custom Filter Interface -->
+            <div class="mb-3">
+              <!-- Toggle Button -->
+              <button class="btn btn-warning btn-sm mb-2" type="button" 
+                      data-bs-toggle="collapse" data-bs-target="#customFilterCollapse" 
+                      aria-expanded="false" aria-controls="customFilterCollapse"
+                      id="customFilterToggleBtn">
+                <i class="bi bi-plus-circle me-1"></i>Add Custom Filter
+                <i class="bi bi-chevron-down ms-1" id="toggleChevron"></i>
+              </button>
+              
+              <!-- Collapsible Content -->
+              <div class="collapse" id="customFilterCollapse">
+                <div class="row p-3 bg-dark rounded border">
+                  <div class="col-12">
+                    <div class="row">
+                      <div class="col-md-2">
+                        <label class="form-label small">Channel <span class="text-danger">*</span></label>
+                        <input class="form-control form-control-sm" id="custom_channel_name" 
+                               placeholder="H_HDR, R, G, B" maxlength="16">
+                      </div>
+                      <div class="col-md-3">
+                        <label class="form-label small">Label/Description</label>
+                        <input class="form-control form-control-sm" id="custom_channel_label" 
+                               placeholder="H-Alpha HDR, Red (optional)">
+                      </div>
+                      <div class="col-md-2">
+                        <label class="form-label small">Planned (mins)</label>
+                        <input class="form-control form-control-sm custom-calc-input" id="custom_channel_minutes" 
+                               type="number" min="0" step="0.1" placeholder="Auto calc">
+                      </div>
+                      <div class="col-md-2">
+                        <label class="form-label small">Sub Exposure (s)</label>
+                        <input class="form-control form-control-sm custom-calc-input" id="custom_channel_exposure" 
+                               type="number" min="0.001" step="0.001" placeholder="e.g. 0.5, 5.5">
+                      </div>
+                      <div class="col-md-2">
+                        <label class="form-label small">Frames Count</label>
+                        <input class="form-control form-control-sm custom-calc-input" id="custom_channel_frames" 
+                               type="number" min="1" step="1" placeholder="e.g. 20">
+                      </div>
+                      <div class="col-md-1 d-flex align-items-end">
+                        <button type="button" class="btn btn-sm btn-success" id="add_custom_filter_btn">
+                          <i class="bi bi-plus"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="row mt-2">
+                      <div class="col-md-6">
+                        <label class="form-label small">Weight</label>
+                        <input class="form-control form-control-sm" id="custom_channel_weight" 
+                               type="number" min="0" step="0.1" value="1.0">
+                      </div>
+                      <div class="col-md-6 d-flex align-items-end">
+                        <div class="form-text text-info small">
+                          <i class="bi bi-info-circle me-1"></i>
+                          Enter any 2 values (minutes, exposure, frames) - the 3rd will auto-calculate
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Hidden inputs for removed and custom filters -->
+            <div id="removed_filters_container"></div>
+            <div id="custom_filters_container"></div>
 
             <button class="btn btn-outline-light btn-sm mt-3" type="submit">
               <i class="bi bi-floppy me-1"></i>Save Plan
@@ -318,15 +394,32 @@
           
           <div class="row">
             <div class="col-md-4 mb-2">
-              <label class="form-label">Channel</label>
-              <input class="form-control" name="channel"
-                     placeholder="H, O, S, L, R, G, B" required>
+              <label class="form-label">Filter</label>
+              {% if plan_data and plan_data.channels %}
+                <select class="form-control" name="channel" id="progress_channel" required>
+                  <option value="">Select a filter...</option>
+                  {% for ch in plan_data.channels %}
+                    <option value="{{ ch.name }}" data-exposure="{{ ch.sub_exposure_seconds or 300 }}">{{ ch.name }} - {{ ch.label }}</option>
+                  {% endfor %}
+                </select>
+              {% else %}
+                <input class="form-control" name="channel"
+                       placeholder="H, O, S, L, R, G, B" required>
+                <div class="form-text text-warning">
+                  <i class="bi bi-exclamation-triangle me-1"></i>No plan found - using manual input
+                </div>
+              {% endif %}
             </div>
 
             <div class="col-md-4 mb-2">
               <label class="form-label">Sub Exposure (s)</label>
-              <input class="form-control" name="sub_exposure_seconds"
-                     type="number" value="300" required>
+              <input class="form-control" name="sub_exposure_seconds" id="progress_exposure"
+                     type="number" value="300" required {% if plan_data and plan_data.channels %}readonly{% endif %}>
+              {% if plan_data and plan_data.channels %}
+                <div class="form-text text-info">
+                  <i class="bi bi-info-circle me-1"></i>Auto-filled from plan
+                </div>
+              {% endif %}
             </div>
 
             <div class="col-md-4 mb-2">
@@ -446,7 +539,7 @@
                 </div>
                 <div class="text-end">
                   {% if session.notes %}
-                    <small class="text-muted d-block" title="{{ session.notes }}">
+                    <small class="text-light d-block" title="{{ session.notes }}">
                       <i class="bi bi-chat-quote me-1"></i>{{ session.notes[:30] }}{% if session.notes|length > 30 %}...{% endif %}
                     </small>
                   {% endif %}
@@ -584,18 +677,31 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function recalcFrames() {
-    if (!planTable) return;
+    console.log('recalcFrames called');
+    if (!planTable) {
+      console.log('No planTable found');
+      return;
+    }
+
+    // Get rows dynamically instead of using cached variable
+    const currentRows = document.querySelectorAll("#plan-table tr.plan-row");
+    console.log('Current rows found:', currentRows.length);
 
     const globalExp = globalExpInput
       ? parseFloat(globalExpInput.value)
       : NaN;
 
-    rows.forEach(row => {
+    console.log('Global exposure:', globalExp);
+
+    currentRows.forEach((row, index) => {
+      console.log(`Processing row ${index}:`, row);
       const minInput = row.querySelector("input.channel-minutes");
       const hmsInput = row.querySelector("input.channel-hms");
       const subInput = row.querySelector("input.channel-subexp");
       const doneCell = row.querySelector("td.completed-minutes");
       const framesInput = row.querySelector("input.planned-frames-input");
+
+      console.log(`Row ${index} elements:`, { minInput, hmsInput, subInput, doneCell, framesInput });
 
       const df = row.querySelector(".done-frames");
       const rf = row.querySelector(".remaining-frames");
@@ -603,7 +709,10 @@ document.addEventListener("DOMContentLoaded", function () {
       const rh = row.querySelector(".remaining-hms");
       const sb = row.querySelector(".status-badge");
 
-      if (!minInput || !subInput || !doneCell) return;
+      if (!minInput || !subInput || !doneCell) {
+        console.log(`Row ${index} missing required elements`);
+        return;
+      }
 
       // Handle bidirectional minutes <-> H:M:S conversion for channels
       if (hmsInput) {
@@ -613,14 +722,14 @@ document.addEventListener("DOMContentLoaded", function () {
           // User is editing HMS: update minutes
           const seconds = parseHMS(hmsInput.value);
           if (seconds !== null) {
-            const minutes = seconds / 60;
-            minInput.value = minutes.toFixed(1);
+            const convertedMinutes = seconds / 60;
+            minInput.value = convertedMinutes.toFixed(1);
           }
         } else if (active === minInput || !hmsInput.value) {
           // User is editing minutes or HMS is empty: update HMS
-          const minutes = parseFloat(minInput.value);
-          if (!isNaN(minutes) && minutes >= 0) {
-            hmsInput.value = minutesToHMS(minutes);
+          const inputMinutes = parseFloat(minInput.value);
+          if (!isNaN(inputMinutes) && inputMinutes >= 0) {
+            hmsInput.value = minutesToHMS(inputMinutes);
           }
         }
       }
@@ -648,13 +757,21 @@ document.addEventListener("DOMContentLoaded", function () {
           }
         } else {
           // User is editing minutes / subexposure / global exp:
-          // recompute frames from minutes
-          if (mins > 0 && exp > 0) {
+          // recompute frames from minutes, but only if frames field is empty or this is not a custom filter with pre-set frames
+          const row = framesInput.closest('tr');
+          const isCustomFilter = row && row.classList.contains('custom-filter');
+          const hasExistingFrames = framesInput.value && parseFloat(framesInput.value) > 0;
+          
+          if (mins > 0 && exp > 0 && (!isCustomFilter || !hasExistingFrames)) {
             framesVal = Math.ceil((mins * 60.0) / exp);
+            framesInput.value = framesVal > 0 ? framesVal : "";
+          } else if (isCustomFilter && hasExistingFrames) {
+            // For custom filters with existing frames, keep the frame value as-is
+            framesVal = parseFloat(framesInput.value);
           } else {
             framesVal = 0;
+            framesInput.value = "";
           }
-          framesInput.value = framesVal > 0 ? framesVal : "";
           
           // Also update H:M:S field when not the active element
           if (hmsInput && active !== hmsInput && mins >= 0) {
@@ -702,6 +819,9 @@ document.addEventListener("DOMContentLoaded", function () {
       if (df) df.textContent = doneFrames;
       if (rf) rf.textContent = remainingFrames;
     });
+    
+    // Update total planned time when any minutes change
+    updateTotalPlannedTime();
   }
 
   // H:M:S parsing and formatting utilities
@@ -751,9 +871,9 @@ document.addEventListener("DOMContentLoaded", function () {
     
     // Minutes input changes -> update HMS
     minutesInput.addEventListener("input", function() {
-      const minutes = parseFloat(this.value);
-      if (!isNaN(minutes) && minutes >= 0) {
-        hmsInput.value = minutesToHMS(minutes);
+      const inputMinutes = parseFloat(this.value);
+      if (!isNaN(inputMinutes) && inputMinutes >= 0) {
+        hmsInput.value = minutesToHMS(inputMinutes);
       }
     });
     
@@ -761,8 +881,8 @@ document.addEventListener("DOMContentLoaded", function () {
     hmsInput.addEventListener("input", function() {
       const seconds = parseHMS(this.value);
       if (seconds !== null) {
-        const minutes = seconds / 60;
-        minutesInput.value = minutes.toFixed(1);
+        const convertedMinutes = seconds / 60;
+        minutesInput.value = convertedMinutes.toFixed(1);
         // Trigger recalc to update the plan
         recalcFrames();
       }
@@ -1092,6 +1212,376 @@ document.addEventListener("DOMContentLoaded", function () {
   
   // Update current time marker every minute
   setInterval(refreshCurrentTimeMarker, 60000);
+
+  // Handle automatic exposure time update for progress form
+  const progressChannelSelect = document.getElementById('progress_channel');
+  const progressExposureInput = document.getElementById('progress_exposure');
+
+  if (progressChannelSelect && progressExposureInput) {
+    progressChannelSelect.addEventListener('change', function() {
+      const selectedOption = this.options[this.selectedIndex];
+      if (selectedOption && selectedOption.dataset.exposure) {
+        progressExposureInput.value = selectedOption.dataset.exposure;
+      }
+    });
+  }
+
+  // Handle custom filter addition
+  const addCustomFilterBtn = document.getElementById('add_custom_filter_btn');
+  const customFiltersContainer = document.getElementById('custom_filters_container');
+  const planTableBody = document.querySelector('#plan-table tbody');
+  let customFilterCounter = 0;
+
+  // Auto-calculation for custom filter form
+  const customCalcInputs = document.querySelectorAll('.custom-calc-input');
+  const customMinutesInput = document.getElementById('custom_channel_minutes');
+  const customExposureInput = document.getElementById('custom_channel_exposure');
+  const customFramesInput = document.getElementById('custom_channel_frames');
+  
+  // Add event listeners for auto-calculation
+  customCalcInputs.forEach(input => {
+    input.addEventListener('change', function() {
+      calculateCustomFilterValues();
+    });
+  });
+  
+  function calculateCustomFilterValues() {
+    const minutes = parseFloat(customMinutesInput.value) || 0;
+    const exposure = parseFloat(customExposureInput.value) || 0;
+    const frames = parseFloat(customFramesInput.value) || 0;
+    
+    // Count how many values are filled
+    let filledCount = 0;
+    if (minutes > 0) filledCount++;
+    if (exposure > 0) filledCount++;
+    if (frames > 0) filledCount++;
+    
+    // If we have exactly 2 values, calculate the third
+    if (filledCount === 2) {
+      if (minutes > 0 && exposure > 0 && frames === 0) {
+        // Calculate frames from minutes and exposure
+        const totalSeconds = minutes * 60;
+        const calculatedFrames = Math.round(totalSeconds / exposure);
+        customFramesInput.value = calculatedFrames;
+      } else if (minutes === 0 && exposure > 0 && frames > 0) {
+        // Calculate minutes from exposure and frames
+        const totalSeconds = exposure * frames;
+        const calculatedMinutes = (totalSeconds / 60).toFixed(1);
+        customMinutesInput.value = calculatedMinutes;
+      } else if (minutes > 0 && exposure === 0 && frames > 0) {
+        // Calculate exposure from minutes and frames
+        const totalSeconds = minutes * 60;
+        const calculatedExposure = (totalSeconds / frames).toFixed(3);
+        customExposureInput.value = calculatedExposure;
+      }
+    }
+    // If all 3 values are filled (filledCount === 3), don't modify anything - user has specified all values
+  }
+
+  if (addCustomFilterBtn) {
+    addCustomFilterBtn.addEventListener('click', function() {
+      const name = document.getElementById('custom_channel_name').value.trim();
+      const label = document.getElementById('custom_channel_label').value.trim() || name; // Use name as label if empty
+      const customMinutes = parseFloat(customMinutesInput.value) || 0;
+      const exposure = parseFloat(customExposureInput.value) || 0;
+      const frames = parseFloat(customFramesInput.value) || 0;
+      const weight = document.getElementById('custom_channel_weight').value;
+
+      if (!name) {
+        alert('Please enter a Channel name.');
+        return;
+      }
+      
+      // Validate that we have enough information to calculate
+      let filledCount = 0;
+      if (customMinutes > 0) filledCount++;
+      if (exposure > 0) filledCount++;
+      if (frames > 0) filledCount++;
+      
+      if (filledCount < 2) {
+        alert('Please fill at least 2 of the 3 calculation fields (minutes, exposure, frames).');
+        return;
+      }
+      
+      // Do final calculation to ensure we have all 3 values
+      let finalMinutes = customMinutes;
+      let finalExposure = exposure;
+      let finalFrames = frames;
+      
+      if (finalMinutes === 0) {
+        finalMinutes = parseFloat(((finalExposure * finalFrames) / 60).toFixed(2));
+      } else if (finalExposure === 0) {
+        finalExposure = parseFloat(((finalMinutes * 60) / finalFrames).toFixed(3));
+      } else if (finalFrames === 0) {
+        finalFrames = Math.round((finalMinutes * 60) / finalExposure);
+      }
+
+      // Check for duplicate channel names
+      const existingChannels = Array.from(planTableBody.querySelectorAll('.plan-row')).map(row => 
+        row.querySelector('td:first-child').textContent.trim()
+      );
+      if (existingChannels.includes(name)) {
+        alert(`Channel "${name}" already exists. Please use a different name.`);
+        return;
+      }
+
+      // Add hidden inputs for the custom filter
+      const customId = customFilterCounter++;
+      customFiltersContainer.innerHTML += `
+        <input type="hidden" name="custom_${customId}_name" value="${name}">
+        <input type="hidden" name="custom_${customId}_label" value="${label}">
+        <input type="hidden" name="custom_${customId}_minutes" value="${finalMinutes}">
+        <input type="hidden" name="custom_${customId}_exposure" value="${finalExposure}">
+        <input type="hidden" name="custom_${customId}_frames" value="${finalFrames}">
+        <input type="hidden" name="custom_${customId}_weight" value="${weight}">
+      `;
+
+      // Add row to the table
+      const newRow = `
+        <tr class="plan-row custom-filter" data-channel="${name}">
+          <td>${name}</td>
+          <td>${label}</td>
+          <td>
+            <input class="form-control form-control-sm channel-minutes minutes-input"
+                  type="number" step="0.1" min="0"
+                  name="ch_${name}_minutes"
+                  value="${finalMinutes}"
+                  title="Minutes">
+          </td>
+          <td>
+            <input class="form-control form-control-sm channel-hms hms-input"
+                  type="text" value="${Math.floor(finalMinutes / 60).toString().padStart(2, '0')}:${Math.floor(finalMinutes % 60).toString().padStart(2, '0')}:${Math.round((finalMinutes % 1) * 60).toString().padStart(2, '0')}"
+                  title="H:M:S format (e.g. 3:00:00)">
+          </td>
+          <td>
+            <input class="form-control form-control-sm channel-subexp subexp-input"
+                  type="number" step="0.001" min="0.001"
+                  name="ch_${name}_subexp"
+                  value="${finalExposure}">
+          </td>
+          <td class="completed-minutes" data-done-seconds="0">0.0</td>
+          <td>
+            <input class="form-control form-control-sm planned-frames-input"
+                  type="number" step="1" min="0" value="${finalFrames}">
+          </td>
+          <td class="done-frames">-</td>
+          <td class="remaining-frames fw-bold">-</td>
+          <td class="remaining-minutes fw-bold">-</td>
+          <td class="remaining-hms fw-bold">-</td>
+          <td class="status-badge"></td>
+          <td>
+            <button type="button" class="btn btn-sm btn-outline-danger remove-filter-btn" 
+                    data-channel="${name}" title="Remove this filter">
+              <i class="bi bi-trash"></i>
+            </button>
+          </td>
+        </tr>
+`;      
+      planTableBody.insertAdjacentHTML('beforeend', newRow);
+
+      // IMMEDIATE: Set the remaining calculations for the new row
+      const newRowElement = planTableBody.lastElementChild;
+      const remainingFramesCell = newRowElement.querySelector('.remaining-frames');
+      const remainingTimeCell = newRowElement.querySelector('.remaining-minutes');
+      const remainingHmsCell = newRowElement.querySelector('.remaining-hms');
+      const statusCell = newRowElement.querySelector('.status-badge');
+      
+      // Set immediate values
+      remainingFramesCell.textContent = finalFrames;
+      remainingTimeCell.textContent = `${finalMinutes}`;
+      const hours = Math.floor(finalMinutes / 60);
+      const minutes = Math.floor(finalMinutes % 60);
+      const seconds = Math.round((finalMinutes % 1) * 60);
+      remainingHmsCell.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      statusCell.innerHTML = '<span class="badge bg-info">New filter</span>';
+
+      // Clear the form
+      document.getElementById('custom_channel_name').value = '';
+      document.getElementById('custom_channel_label').value = '';
+      customMinutesInput.value = '';
+      customExposureInput.value = '';
+      customFramesInput.value = '';
+      document.getElementById('custom_channel_weight').value = '1.0';
+
+      // IMMEDIATE: Update total planned time
+      const totalMinutesInput = document.getElementById('total_planned_minutes');
+      if (totalMinutesInput) {
+        const currentTotal = parseFloat(totalMinutesInput.value) || 0;
+        totalMinutesInput.value = currentTotal + finalMinutes;
+        
+        // Also update H:M:S total
+        const totalHmsInput = document.getElementById('total_planned_hms');
+        if (totalHmsInput && typeof minutesToHMS === 'function') {
+          totalHmsInput.value = minutesToHMS(currentTotal + finalMinutes);
+        }
+      }
+
+      // IMPORTANT: Refresh all calculations for the new row
+      setTimeout(() => {
+        // Refresh progress calculations for all rows including new one
+        if (typeof recalcFrames === 'function') {
+          recalcFrames();
+        }
+        
+        // Update total planned time
+        if (typeof updateTotalPlannedTime === 'function') {
+          updateTotalPlannedTime();
+        }
+        
+        // Refresh the progress form filter dropdown
+        if (typeof refreshProgressFilterDropdown === 'function') {
+          refreshProgressFilterDropdown();
+        }
+        
+        // Automatically save the plan after adding custom filter
+        const planForm = document.getElementById('plan-form');
+        if (planForm) {
+          console.log('Auto-submitting plan form...');
+          planForm.submit();
+        } else {
+          console.log('Plan form not found!');
+        }
+      }, 100);
+    });
+  }
+
+  // Function to initialize calculations for all rows (including new ones)
+  function initializeRowCalculations() {
+    const newRows = document.querySelectorAll('#plan-table tbody .plan-row');
+    newRows.forEach(row => {
+      // Re-attach event listeners for the calculation inputs
+      const minutesInput = row.querySelector('.minutes-input');
+      const hmsInput = row.querySelector('.hms-input');
+      const subexpInput = row.querySelector('.subexp-input');
+      const framesInput = row.querySelector('.planned-frames-input');
+      
+      if (minutesInput && !minutesInput.hasAttribute('data-initialized')) {
+        minutesInput.addEventListener('input', function() {
+          recalcFrames();
+        });
+        minutesInput.setAttribute('data-initialized', 'true');
+      }
+      
+      if (hmsInput && !hmsInput.hasAttribute('data-initialized')) {
+        hmsInput.addEventListener('input', function() {
+          recalcFrames();
+        });
+        hmsInput.setAttribute('data-initialized', 'true');
+      }
+      
+      if (subexpInput && !subexpInput.hasAttribute('data-initialized')) {
+        subexpInput.addEventListener('input', function() {
+          recalcFrames();
+        });
+        subexpInput.setAttribute('data-initialized', 'true');
+      }
+      
+      if (framesInput && !framesInput.hasAttribute('data-initialized')) {
+        framesInput.addEventListener('input', function() {
+          recalcFrames();
+        });
+        framesInput.setAttribute('data-initialized', 'true');
+      }
+    });
+  }
+  
+  // Function to update total planned time
+  function updateTotalPlannedTime() {
+    const totalMinutesInput = document.getElementById('total_planned_minutes');
+    if (!totalMinutesInput) return;
+    
+    let totalMinutes = 0;
+    const minutesInputs = document.querySelectorAll('.minutes-input');
+    minutesInputs.forEach(input => {
+      const value = parseFloat(input.value) || 0;
+      totalMinutes += value;
+    });
+    
+    totalMinutesInput.value = totalMinutes.toFixed(1);
+    
+    // Also update the H:M:S field if it exists
+    const totalHmsInput = document.getElementById('total_planned_hms');
+    if (totalHmsInput) {
+      totalHmsInput.value = minutesToHMS(totalMinutes);
+    }
+  }
+
+  // Function to refresh the progress form filter dropdown  
+  function refreshProgressFilterDropdown() {
+    const progressChannelSelect = document.getElementById('progress_channel');
+    if (!progressChannelSelect) return;
+    
+    // Clear existing options except the first one
+    while (progressChannelSelect.children.length > 1) {
+      progressChannelSelect.removeChild(progressChannelSelect.lastChild);
+    }
+    
+    // Add all current plan filters
+    const planRows = document.querySelectorAll('#plan-table tbody .plan-row');
+    planRows.forEach(row => {
+      const channelName = row.querySelector('td:first-child').textContent.trim();
+      const channelLabel = row.querySelector('td:nth-child(2)').textContent.trim();
+      const exposureInput = row.querySelector('.channel-subexp');
+      const exposureValue = exposureInput ? exposureInput.value : '300';
+      
+      const option = document.createElement('option');
+      option.value = channelName;
+      option.textContent = `${channelName} - ${channelLabel}`;
+      option.setAttribute('data-exposure', exposureValue);
+      progressChannelSelect.appendChild(option);
+    });
+  }
+
+  // Handle filter removal
+  document.addEventListener('click', function(e) {
+    if (e.target.closest('.remove-filter-btn')) {
+      const btn = e.target.closest('.remove-filter-btn');
+      const channel = btn.dataset.channel;
+      const row = btn.closest('tr');
+      
+      if (confirm(`Remove filter "${channel}"? This action cannot be undone.`)) {
+        // Add to removed filters list for all filters (including custom ones)
+        const removedContainer = document.getElementById('removed_filters_container');
+        removedContainer.innerHTML += `<input type="hidden" name="removed_filter" value="${channel}">`;
+        
+        // Remove the row
+        row.remove();
+        
+        // Refresh progress calculations
+        if (typeof recalcFrames === 'function') {
+          recalcFrames();
+        }
+        
+        // Refresh the progress form filter dropdown
+        if (typeof refreshProgressFilterDropdown === 'function') {
+          refreshProgressFilterDropdown();
+        }
+      }
+    }
+  });
+
+  // Custom filter toggle functionality
+  const customFilterToggleBtn = document.getElementById('customFilterToggleBtn');
+  const customFilterCollapse = document.getElementById('customFilterCollapse');
+  const toggleChevron = document.getElementById('toggleChevron');
+  
+  if (customFilterToggleBtn && customFilterCollapse) {
+    customFilterToggleBtn.addEventListener('click', function() {
+      if (customFilterCollapse.classList.contains('show')) {
+        // Currently expanded, so collapse it
+        customFilterCollapse.classList.remove('show');
+        toggleChevron.classList.remove('bi-chevron-up');
+        toggleChevron.classList.add('bi-chevron-down');
+        customFilterToggleBtn.setAttribute('aria-expanded', 'false');
+      } else {
+        // Currently collapsed, so expand it
+        customFilterCollapse.classList.add('show');
+        toggleChevron.classList.remove('bi-chevron-down');
+        toggleChevron.classList.add('bi-chevron-up');
+        customFilterToggleBtn.setAttribute('aria-expanded', 'true');
+      }
+    });
+  }
 });
 </script>
 

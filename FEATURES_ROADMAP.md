@@ -1,5 +1,5 @@
 # AstroPlanner – Feature Roadmap  
-*Status: Updated to 2025-12-12*
+*Status: Updated to 2025-12-25*
 
 This document tracks the major features of the AstroPlanner project, what has been completed, and what remains.  
 It is intended to be version-controlled in Git for transparency, planning, and future development.
@@ -258,7 +258,65 @@ Complete imaging session tracking and progress logging system to track astrophot
 
 ---
 
-## 🟡 10. Session Recommendation Engine with AI-Driven Logic (Pending)
+## ✅ 10. Enhanced Imaging Progress & Custom Filter System (Completed)
+### Summary  
+Major enhancements to the imaging progress tracking system, including automated filter selection from target plans and comprehensive custom filter functionality with real-time calculations.
+
+### Completed Features
+
+#### 10.1 Automated Filter Selection
+- **Auto-populated Dropdown**: When adding imaging progress, filter dropdown automatically populates with all filters from the current target plan
+- **Seamless Integration**: No more manual filter entry - filters are pulled directly from the active target plan
+- **Dynamic Updates**: Filter list updates automatically when plan changes are made
+
+#### 10.2 Custom Filter Addition System
+- **Interactive Custom Filter Form**: Complete form interface for adding custom filters not in the original plan
+- **Real-time Bidirectional Calculations**: 
+  - Enter any 2 of: planned minutes, sub exposure time, or frame count
+  - Third value automatically calculates in real-time
+  - Supports decimal precision for sub-exposure times (e.g., 0.14 seconds for HDR imaging)
+- **Comprehensive Input Validation**: Form validation with proper decimal support and range checking
+- **Auto-save Functionality**: Adding a custom filter automatically saves the plan without requiring separate "Save Plan" action
+- **Weight Configuration**: Custom weight settings for advanced planning scenarios
+
+#### 10.3 Enhanced User Experience
+- **Collapsible Interface**: Custom filter form is collapsible to save screen space when not needed
+- **Visual Contrast**: Improved button styling with better color contrast for visibility
+- **Progress Notes Display**: Fixed note visibility in imaging progress log with proper color contrast
+- **Streamlined Workflow**: Single-click custom filter addition with automatic form submission
+
+#### 10.4 Technical Improvements
+- **Decimal Precision Support**: Full support for decimal sub-exposure times throughout the system
+- **JavaScript Error Resolution**: Fixed variable redeclaration conflicts in calculation functions
+- **Backend Decimal Handling**: Updated progress routes to handle float values instead of integer-only
+- **Frame Count Preservation**: Custom filter calculations preserve user-specified frame counts
+- **Deletion Handling**: Proper marking and removal of custom filters from plans
+
+#### 10.5 Data Integrity & Calculations
+- **Bidirectional Input Sync**: Minutes ↔ exposure time ↔ frame count calculations work seamlessly
+- **Plan Consistency**: Custom filters integrate with existing plan structure and calculations
+- **Real-time Updates**: All plan calculations update immediately when custom filters are added
+- **Database Compatibility**: Custom filter data stored consistently with existing plan structure
+
+### Technical Implementation
+- **Frontend**: Enhanced JavaScript calculation engine with `recalcFrames()` and `calculateCustomFilterValues()` functions
+- **Backend**: Updated Flask routes with proper decimal handling in `add_progress` and `update_plan` endpoints  
+- **Database**: Seamless integration with existing JSON plan structure for custom filter persistence
+- **UI/UX**: Bootstrap-based responsive design with collapse functionality and improved accessibility
+
+### User Benefits
+- **Simplified Workflow**: No need to manually type filter names - they're auto-populated from plans
+- **Flexible Planning**: Can add custom filters on-the-fly for HDR, experimental, or specialized imaging
+- **Accurate Calculations**: Real-time bidirectional calculations ensure plan accuracy
+- **Improved Progress Tracking**: Enhanced progress logging with visible notes and better organization
+- **Space-Efficient Interface**: Collapsible custom filter form keeps UI clean when not needed
+
+### Status  
+**✅ Fully implemented and working.**
+
+---
+
+## 🟡 11. Session Recommendation Engine with AI-Driven Logic (Pending)
 ### Summary
 Implement an intelligent session recommendation engine that uses AI/ML to optimize imaging sessions based on multiple factors and user preferences.
 
@@ -295,7 +353,7 @@ Implement an intelligent session recommendation engine that uses AI/ML to optimi
 
 ---
 
-## 🟡 10.5. PostgreSQL Database Support for Cloud Deployment (Pending)
+## 🟡 11.5. PostgreSQL Database Support for Cloud Deployment (Pending)
 ### Summary
 Add PostgreSQL database support to enable deployment on serverless platforms like Google Cloud Run, AWS Lambda, or Kubernetes clusters where SQLite's file-based approach is not suitable.
 
@@ -350,7 +408,7 @@ Add PostgreSQL database support to enable deployment on serverless platforms lik
 
 ---
 
-## 🟡 11. Automatic Recompute Pipeline (Pending)
+## 🟡 12. Automatic Recompute Pipeline (Pending)
 Any of the following should automatically trigger a full recomputation:
 - Changing pack-up time  
 - Changing altitude threshold  
@@ -371,7 +429,7 @@ Not started.
 
 ---
 
-## 🟡 12. Comprehensive User Guide & Documentation (Pending)
+## 🟡 13. Comprehensive User Guide & Documentation (Pending)
 ### Summary
 Create comprehensive documentation and user guide to help new users get started with AstroPlanner and understand all available features and workflows.
 
@@ -463,6 +521,7 @@ Create comprehensive documentation and user guide to help new users get started 
 | Plan & Palette Enhancements | ✅ Done | H:M:S formatting and bidirectional frame/time inputs |
 | Altitude chart enhancements | ✅ Done | Threshold lines, window shading, current time marker |
 | Imaging logs & session tracking | ✅ Done | Comprehensive progress tracking with analytics |
+| Enhanced imaging progress & custom filters | ✅ Done | Auto-populated filters, custom filter addition, collapsible UI |
 | Session recommendation engine | 🟡 Pending | AI-driven session optimization |
 | PostgreSQL database support | 🟡 Pending | Cloud deployment readiness |
 | Automatic recomputation | 🟡 Pending | After changes to settings |
@@ -471,17 +530,17 @@ Create comprehensive documentation and user guide to help new users get started 
 ---
 
 # Next Recommended Focus
-**10. Session Recommendation Engine** - AI-driven session optimization  
-Now that the core planning features are complete (time formatting, palette management, altitude visualization, imaging logs), the next major enhancement is implementing an intelligent session recommendation engine. This ambitious feature includes:
+**11. Session Recommendation Engine** - AI-driven session optimization  
+Now that the core planning features are complete (time formatting, palette management, altitude visualization, imaging logs, and enhanced custom filter system), the next major enhancement is implementing an intelligent session recommendation engine. This ambitious feature includes:
 - Weather integration and forecasting
 - AI-driven target priority scoring based on multiple factors
 - Automatic session planning and filter switching recommendations
 - Machine learning to adapt to user behavior and local conditions
 
 Alternative focus areas:
-- **12. Comprehensive User Guide & Documentation** - Getting started guides, tutorials, and feature documentation to improve user onboarding
-- **10.5. PostgreSQL Database Support** - Enable cloud deployment on serverless platforms (Cloud Run, Kubernetes)
-- **11. Automatic Recomputation** - Dynamic updates when settings change
+- **13. Comprehensive User Guide & Documentation** - Getting started guides, tutorials, and feature documentation to improve user onboarding
+- **11.5. PostgreSQL Database Support** - Enable cloud deployment on serverless platforms (Cloud Run, Kubernetes)
+- **12. Automatic Recomputation** - Dynamic updates when settings change
 - **Additional Export Formats** - More observatory software integrations
 - **Mobile Responsiveness** - Enhanced mobile interface optimizations
 

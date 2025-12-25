@@ -871,6 +871,66 @@ def update_plan(target_id):
         flash("Plan JSON is missing channels.", "danger")
         return redirect(url_for("target_detail", target_id=target.id))
 
+    # Handle filter removal
+    removed_filters = request.form.getlist("removed_filter")
+    if removed_filters:
+        channels = [c for c in channels if c.get("name") not in removed_filters]
+
+    # Handle custom filter addition
+    custom_filters = {}
+    for key in request.form.keys():
+        if key.startswith("custom_") and key.endswith("_name"):
+            # Extract the custom filter ID
+            parts = key.split("_")
+            if len(parts) >= 3:
+                custom_id = parts[1]
+                custom_filters[custom_id] = {}
+
+    # Build custom filters
+    for custom_id in custom_filters.keys():
+        name = request.form.get(f"custom_{custom_id}_name", "").strip()
+        label = request.form.get(f"custom_{custom_id}_label", "").strip()
+        minutes = request.form.get(f"custom_{custom_id}_minutes", "0")
+        exposure = request.form.get(f"custom_{custom_id}_exposure", "300")
+        frames = request.form.get(f"custom_{custom_id}_frames", "0")
+        weight = request.form.get(f"custom_{custom_id}_weight", "1.0")
+
+        if name:
+            # Use name as label if label is empty
+            if not label:
+                label = name
+                
+            try:
+                # Check if channel already exists
+                existing_names = [c.get("name") for c in channels]
+                if name not in existing_names:
+                    # Calculate missing values if needed
+                    final_minutes = float(minutes) if minutes else 0.0
+                    final_exposure = float(exposure) if exposure else 300.0
+                    final_frames = int(float(frames)) if frames else 0
+                    
+                    # If we have exposure and frames but no minutes, calculate it
+                    if final_exposure > 0 and final_frames > 0 and final_minutes == 0:
+                        final_minutes = (final_exposure * final_frames) / 60.0
+                    # If we have minutes and frames but no exposure, calculate it
+                    elif final_minutes > 0 and final_frames > 0 and final_exposure == 0:
+                        final_exposure = round((final_minutes * 60) / final_frames, 3)
+                    # If we have minutes and exposure but no frames, calculate it
+                    elif final_minutes > 0 and final_exposure > 0 and final_frames == 0:
+                        final_frames = round((final_minutes * 60) / final_exposure)
+                    
+                    channels.append({
+                        "name": name,
+                        "label": label,
+                        "planned_minutes": final_minutes,
+                        "sub_exposure_seconds": final_exposure,
+                        "weight": float(weight) if weight else 1.0,
+                        "weight_fraction": 0.0  # Will be recalculated below
+                    })
+            except ValueError:
+                # Skip invalid custom filters
+                pass
+
     # Original total (from plan or sum of channels)
     orig_total = data.get("total_planned_minutes")
     if not orig_total:
@@ -902,7 +962,7 @@ def update_plan(target_id):
     if new_total and new_total > 0 and orig_total and orig_total > 0:
         scale = new_total / orig_total
         for c in channels:
-            c["planned_minutes"] = round(c["planned_minutes"] * scale)
+            c["planned_minutes"] = c["planned_minutes"] * scale
 
     # Then apply per-channel overrides from the form
     for c in channels:
@@ -914,7 +974,7 @@ def update_plan(target_id):
             try:
                 mins = float(field_val)
                 if mins >= 0:
-                    c["planned_minutes"] = round(mins)
+                    c["planned_minutes"] = mins
             except ValueError:
                 pass  # ignore bad values, keep previous
 
@@ -923,7 +983,7 @@ def update_plan(target_id):
         sub_val = request.form.get(sub_field)
         if sub_val is not None and sub_val != "":
             try:
-                sec = int(float(sub_val))
+                sec = float(sub_val)  # Changed from int(float(sub_val)) to float(sub_val)
                 if sec > 0:
                     c["sub_exposure_seconds"] = sec
             except ValueError:
@@ -964,7 +1024,7 @@ def update_plan(target_id):
 def add_progress(target_id):
     target = Target.query.get_or_404(target_id)
     channel = request.form.get("channel").strip().upper()
-    sub_exposure_seconds = int(request.form.get("sub_exposure_seconds"))
+    sub_exposure_seconds = float(request.form.get("sub_exposure_seconds"))
     sub_count = int(request.form.get("sub_count"))
     notes = request.form.get("notes")
     
