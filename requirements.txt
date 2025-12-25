@@ -15,7 +15,7 @@ numpy>=2.3.5
 pytz>=2025.2
 
 # Environment Configuration (optional, for .env file support)
-# python-dotenv>=1.2.1
+python-dotenv>=1.2.1
 
 # Production Server (optional, for deployment)
 # gunicorn>=21.0.0
