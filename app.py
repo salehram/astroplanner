@@ -725,10 +725,13 @@ def export_nina_sequence(target_id):
         if not ch_name:
             continue
 
+        # For NINA export, use nina_filter if available (for custom filters), otherwise use the channel name
+        nina_channel = ch.get("nina_filter", ch_name)
+
         planned_minutes = ch.get("planned_minutes", 0) or 0
         sub_exp = ch.get("sub_exposure_seconds", 300) or 300
 
-        done_sec = progress_seconds[ch_name]
+        done_sec = progress_seconds[ch_name]  # Still use original channel name for progress tracking
         planned_sec = planned_minutes * 60
         remaining_sec = max(planned_sec - done_sec, 0)
 
@@ -740,9 +743,9 @@ def export_nina_sequence(target_id):
             continue
 
         blocks.append({
-            "channel": ch_name,       # "H", "O", "S", "L", "R", "G", "B", "LP"
-            "exposure_s": sub_exp,    # e.g. 300
-            "frames": frames,         # remaining frames
+            "channel": nina_channel,      # Use mapped filter for NINA (e.g., "O" instead of "O_HDR_1")
+            "exposure_s": sub_exp,        # e.g. 300
+            "frames": frames,             # remaining frames
         })
 
     if not blocks:
@@ -890,6 +893,7 @@ def update_plan(target_id):
     for custom_id in custom_filters.keys():
         name = request.form.get(f"custom_{custom_id}_name", "").strip()
         label = request.form.get(f"custom_{custom_id}_label", "").strip()
+        nina_filter = request.form.get(f"custom_{custom_id}_nina_filter", "").strip()
         minutes = request.form.get(f"custom_{custom_id}_minutes", "0")
         exposure = request.form.get(f"custom_{custom_id}_exposure", "300")
         frames = request.form.get(f"custom_{custom_id}_frames", "0")
@@ -922,6 +926,7 @@ def update_plan(target_id):
                     channels.append({
                         "name": name,
                         "label": label,
+                        "nina_filter": nina_filter,  # Add mapping for NINA export
                         "planned_minutes": final_minutes,
                         "sub_exposure_seconds": final_exposure,
                         "weight": float(weight) if weight else 1.0,

@@ -206,50 +206,64 @@
               
               <!-- Collapsible Content -->
               <div class="collapse" id="customFilterCollapse">
-                <div class="row p-3 bg-dark rounded border">
-                  <div class="col-12">
-                    <div class="row">
-                      <div class="col-md-2">
-                        <label class="form-label small">Channel <span class="text-danger">*</span></label>
+                <div class="card bg-dark border-warning">
+                  <div class="card-body">
+                    <div class="row g-2">
+                      <div class="col-md-3">
+                        <label class="form-label small fw-bold text-light">Channel <span class="text-danger">*</span></label>
                         <input class="form-control form-control-sm" id="custom_channel_name" 
-                               placeholder="H_HDR, R, G, B" maxlength="16">
+                               placeholder="e.g., O_HDR_4, H_NB, R_LP" maxlength="16">
                       </div>
                       <div class="col-md-3">
-                        <label class="form-label small">Label/Description</label>
+                        <label class="form-label small fw-bold text-light">Label/Description</label>
                         <input class="form-control form-control-sm" id="custom_channel_label" 
-                               placeholder="H-Alpha HDR, Red (optional)">
+                               placeholder="e.g., OIII HDR #4, H-Alpha Narrowband">
                       </div>
                       <div class="col-md-2">
-                        <label class="form-label small">Planned (mins)</label>
-                        <input class="form-control form-control-sm custom-calc-input" id="custom_channel_minutes" 
-                               type="number" min="0" step="0.1" placeholder="Auto calc">
+                        <label class="form-label small fw-bold text-light">Maps to Filter <span class="text-danger">*</span></label>
+                        <select class="form-control form-control-sm" id="custom_channel_nina_filter" required>
+                          <option value="">Select...</option>
+                          <option value="H">H (H-Alpha)</option>
+                          <option value="O">O (OIII)</option>
+                          <option value="S">S (SII)</option>
+                          <option value="L">L (Luminance)</option>
+                          <option value="R">R (Red)</option>
+                          <option value="G">G (Green)</option>
+                          <option value="B">B (Blue)</option>
+                          <option value="LP">LP (Light Pollution)</option>
+                        </select>
                       </div>
                       <div class="col-md-2">
-                        <label class="form-label small">Sub Exposure (s)</label>
-                        <input class="form-control form-control-sm custom-calc-input" id="custom_channel_exposure" 
-                               type="number" min="0.001" step="0.001" placeholder="e.g. 0.5, 5.5">
-                      </div>
-                      <div class="col-md-2">
-                        <label class="form-label small">Frames Count</label>
-                        <input class="form-control form-control-sm custom-calc-input" id="custom_channel_frames" 
-                               type="number" min="1" step="1" placeholder="e.g. 20">
-                      </div>
-                      <div class="col-md-1 d-flex align-items-end">
-                        <button type="button" class="btn btn-sm btn-success" id="add_custom_filter_btn">
-                          <i class="bi bi-plus"></i>
-                        </button>
-                      </div>
-                    </div>
-                    <div class="row mt-2">
-                      <div class="col-md-6">
-                        <label class="form-label small">Weight</label>
+                        <label class="form-label small fw-bold text-light">Weight</label>
                         <input class="form-control form-control-sm" id="custom_channel_weight" 
                                type="number" min="0" step="0.1" value="1.0">
                       </div>
-                      <div class="col-md-6 d-flex align-items-end">
-                        <div class="form-text text-info small">
-                          <i class="bi bi-info-circle me-1"></i>
-                          Enter any 2 values (minutes, exposure, frames) - the 3rd will auto-calculate
+                      <div class="col-md-2 d-flex align-items-end">
+                        <button type="button" class="btn btn-success btn-sm w-100" id="add_custom_filter_btn">
+                          <i class="bi bi-plus-circle me-1"></i>Add Filter
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div class="row g-2 mt-1">
+                      <div class="col-md-3">
+                        <label class="form-label small fw-bold text-light">Planned (mins)</label>
+                        <input class="form-control form-control-sm custom-calc-input" id="custom_channel_minutes" 
+                               type="number" min="0" step="0.1" placeholder="Auto calculated">
+                      </div>
+                      <div class="col-md-3">
+                        <label class="form-label small fw-bold text-light">Sub Exposure (s)</label>
+                        <input class="form-control form-control-sm custom-calc-input" id="custom_channel_exposure" 
+                               type="number" min="0.001" step="0.001" placeholder="e.g., 0.5, 5.5, 30">
+                      </div>
+                      <div class="col-md-3">
+                        <label class="form-label small fw-bold text-light">Frames Count</label>
+                        <input class="form-control form-control-sm custom-calc-input" id="custom_channel_frames" 
+                               type="number" min="1" step="1" placeholder="Auto calculated">
+                      </div>
+                      <div class="col-md-3 d-flex align-items-end">
+                        <div class="alert alert-info alert-sm mb-0 py-1 px-2 w-100">
+                          <small><i class="bi bi-info-circle me-1"></i>Fill any 2 fields - 3rd auto-calculates</small>
                         </div>
                       </div>
                     </div>
@@ -1282,6 +1296,7 @@ document.addEventListener("DOMContentLoaded", function () {
     addCustomFilterBtn.addEventListener('click', function() {
       const name = document.getElementById('custom_channel_name').value.trim();
       const label = document.getElementById('custom_channel_label').value.trim() || name; // Use name as label if empty
+      const ninaFilter = document.getElementById('custom_channel_nina_filter').value.trim();
       const customMinutes = parseFloat(customMinutesInput.value) || 0;
       const exposure = parseFloat(customExposureInput.value) || 0;
       const frames = parseFloat(customFramesInput.value) || 0;
@@ -1289,6 +1304,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
       if (!name) {
         alert('Please enter a Channel name.');
+        return;
+      }
+      
+      if (!ninaFilter) {
+        alert('Please select which standard filter this custom filter maps to for NINA export.');
         return;
       }
       
@@ -1330,6 +1350,7 @@ document.addEventListener("DOMContentLoaded", function () {
       customFiltersContainer.innerHTML += `
         <input type="hidden" name="custom_${customId}_name" value="${name}">
         <input type="hidden" name="custom_${customId}_label" value="${label}">
+        <input type="hidden" name="custom_${customId}_nina_filter" value="${ninaFilter}">
         <input type="hidden" name="custom_${customId}_minutes" value="${finalMinutes}">
         <input type="hidden" name="custom_${customId}_exposure" value="${finalExposure}">
         <input type="hidden" name="custom_${customId}_frames" value="${finalFrames}">
@@ -1398,6 +1419,7 @@ document.addEventListener("DOMContentLoaded", function () {
       // Clear the form
       document.getElementById('custom_channel_name').value = '';
       document.getElementById('custom_channel_label').value = '';
+      document.getElementById('custom_channel_nina_filter').value = '';
       customMinutesInput.value = '';
       customExposureInput.value = '';
       customFramesInput.value = '';
