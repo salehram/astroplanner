@@ -1,10 +1,11 @@
 # AstroPlanner – Feature Roadmap  
-*Status: Updated to 2025-12-27 | Version 1.0.0*
+*Status: Updated to 2025-12-27 | Version 2.0.0-dev (PostgreSQL Support Branch)*
 
 This document tracks the major features of the AstroPlanner project, what has been completed, and what remains.  
 It is intended to be version-controlled in Git for transparency, planning, and future development.
 
-**🎉 Version 1.0.0 Release - Complete Feature Set**
+**🎉 Version 1.0.0 Release - Complete Feature Set**  
+**🚀 Version 2.0.0-dev - PostgreSQL Support Implementation**
 
 ---
 
@@ -570,6 +571,51 @@ Create comprehensive documentation and user guide to help new users get started 
 
 ---
 
+## ✅ 11.5. PostgreSQL Database Support
+### Summary  
+Enable cloud deployment and production-ready database infrastructure by implementing dual database support with runtime selection between SQLite (development) and PostgreSQL (production).
+
+### Completed
+- **Core Database Abstraction**: 
+  - `config/database.py`: Environment-based database configuration with auto-detection
+  - Support for SQLite and PostgreSQL with proper connection pooling
+  - Cloud platform detection (Heroku, Railway, Render) with automatic configuration
+  
+- **Migration Engine**: 
+  - `config/migration.py`: Bidirectional data migration between database types
+  - Data validation, backup creation, and integrity checking
+  - Rollback capabilities and comprehensive error handling
+  
+- **CLI Management Tools**:
+  - `flask db info`: Display current database configuration and test connection
+  - `flask db init`: Initialize database schema with default data
+  - `flask db migrate`: Migrate data between SQLite and PostgreSQL
+  - `flask db backup`: Create database backups
+  - `flask db reset`: Reset database for development
+  
+- **Production Deployment**:
+  - Environment configuration templates (`.env.example`, `.env.production`)
+  - Complete deployment guide (`POSTGRESQL_DEPLOYMENT.md`)
+  - Support for Heroku, Railway, Render, Docker, and Kubernetes
+  - SSL configuration and security hardening
+  
+- **Testing Framework**:
+  - Comprehensive test suite for both database types
+  - Test runner with database-specific configurations
+  - Parametrized tests ensuring feature parity
+
+### Technical Benefits
+- **Development**: Continue using SQLite for local development
+- **Production**: Deploy with PostgreSQL for better performance and reliability
+- **Cloud Ready**: Seamless deployment on any cloud platform
+- **Data Safety**: Proven migration and backup systems
+- **Scalability**: Connection pooling and performance optimization
+
+### Remaining  
+Nothing. Feature fully implemented and production-ready.
+
+---
+
 # Next Recommended Focus
 **11. Session Recommendation Engine** - AI-driven session optimization  
 Now that the core planning features are complete (time formatting, palette management, altitude visualization, imaging logs, and enhanced custom filter system), the next major enhancement is implementing an intelligent session recommendation engine. This ambitious feature includes:
@@ -580,7 +626,6 @@ Now that the core planning features are complete (time formatting, palette manag
 
 Alternative focus areas:
 - **13. Comprehensive User Guide & Documentation** - Getting started guides, tutorials, and feature documentation to improve user onboarding
-- **11.5. PostgreSQL Database Support** - Enable cloud deployment on serverless platforms (Cloud Run, Kubernetes)
 - **12. Automatic Recomputation** - Dynamic updates when settings change
 - **Additional Export Formats** - More observatory software integrations
 - **Mobile Responsiveness** - Enhanced mobile interface optimizations
