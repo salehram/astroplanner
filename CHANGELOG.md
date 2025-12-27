@@ -5,29 +5,70 @@ All notable changes to AstroPlanner will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.0] - 2025-12-14
+## [1.0.0] - 2025-12-27
 
-### 🎉 Initial Stable Release
+### 🎉 Version 1.0.0 - Complete Feature Set Release
 
-**AstroPlanner v1.0.0** represents the first stable release of a comprehensive astrophotography session planning tool with all core features complete and thoroughly tested.
+**AstroPlanner v1.0.0** represents a mature, feature-complete astrophotography planning platform with comprehensive target management, session tracking, telescope integration, and advanced progress management capabilities.
 
-### ✅ Core Features Included
+### ✅ Complete Feature Set
 
-#### Target Management
-- **Project-based Organization**: Each target treated as its own imaging project
-- **Creation Tracking**: Automatic timestamp tracking with local timezone support  
-- **Target Settings**: Per-target overrides for pack-up time and minimum altitude
-- **Priority Scoring**: Intelligent priority calculation based on completion, remaining time, and tonight's window
+#### Target Management & Planning
+- **Project-based Organization**: Each target treated as its own imaging project with dedicated tracking
+- **Creation Tracking**: Automatic timestamp tracking with robust local timezone support  
+- **Target Settings**: Per-target overrides for pack-up time and minimum altitude constraints
+- **Priority Scoring**: Intelligent priority calculation based on completion percentage, remaining time, and tonight's window
+- **Advanced Filter System**: Custom filter addition with real-time bidirectional calculations (minutes ↔ frames ↔ exposure time)
+- **NINA Filter Mapping**: Custom filters map to standard telescope filter wheel names for hardware compatibility
 
-#### Session Planning  
-- **Tonight's Recommendation**: AI-driven target recommendations for optimal session planning
-- **Window Calculations**: Automatic calculation of imaging windows based on sunset, darkness, altitude constraints
-- **Progress Tracking**: Comprehensive tracking of completed vs. planned exposures
-- **Status Indicators**: Visual badges showing completion status and tonight's potential
+#### Session Planning & Execution
+- **Tonight's Recommendation**: AI-driven target recommendations with intelligent priority scoring
+- **Window Calculations**: Automatic imaging window calculation based on sunset, astronomical darkness, and altitude constraints
+- **Enhanced Progress Tracking**: Comprehensive session tracking with edit/delete functionality and data validation
+- **Advanced Time Management**: Flexible H:M:S formatting with bidirectional conversions and decimal precision support
+- **Imaging Logs**: Complete session history with statistics, analytics, monthly summaries, and backdating support
 
-#### Palette Management
-- **Custom Palettes**: Create and manage custom filter palettes for different targets
-- **Database-driven**: Full CRUD operations for palette management with system and custom palette support
+#### Palette & Filter Management
+- **Database-driven Palettes**: Full CRUD operations with system vs. custom palette protection and JSON-based storage
+- **Auto-populated Filters**: Filter selection automatically populates from active target plans with custom filter support
+- **Smart Filter Recommendations**: Intelligent filter suggestions based on target type and palette selection
+- **Custom Filter Integration**: On-the-fly custom filter addition with auto-save and NINA telescope compatibility
+
+#### Advanced Planning & Calculations  
+- **Real-time Bidirectional Inputs**: Frame counts ↔ exposure times ↔ total minutes with decimal precision support
+- **Dynamic Calculations**: Real-time JavaScript validation and calculation updates as you modify exposure plans
+- **Multi-format Display**: Times displayed in both minutes and H:M:S format throughout the interface
+- **Status Indicators**: Visual badges and progress indicators showing completion status and tonight's imaging potential
+- **Column Organization**: Logical table column ordering for improved workflow efficiency
+
+#### NINA Integration & Telescope Support
+- **Advanced Export System**: Direct export to N.I.N.A. (Nighttime Imaging 'N' Astronomy) Advanced Sequencer
+- **Filter Wheel Integration**: Custom filter mapping ensures proper telescope hardware operation and compatibility
+- **Template System**: Customizable sequence templates with dynamic block generation
+- **Remaining Frames Export**: Intelligent export of only remaining frames for efficient session continuation
+- **Hardware Compatibility**: Full support for telescope filter wheels, cameras, and automation systems
+
+#### Configuration & Global Settings
+- **Observer Location**: Configurable latitude, longitude, and elevation with global defaults and validation
+- **Timezone Support**: Robust timezone handling with Windows compatibility and automatic UTC conversion
+- **Settings Management**: Dedicated configuration interface for both global and per-target settings
+- **Default Overrides**: Global defaults with per-target override capabilities for flexible configuration
+
+#### Data Management & Session Analytics
+- **Session CRUD Operations**: Complete edit and delete functionality for imaging sessions with confirmation dialogs
+- **Comprehensive Analytics**: Daily, monthly, and overall imaging statistics with visual progress indicators
+- **Session History**: Complete imaging session tracking with date grouping and chronological organization
+- **Data Integrity**: Form validation, error handling, UTF-8 encoding, and database consistency maintenance
+- **Progress Visualization**: Charts, summaries, and visual indicators for session tracking and planning
+
+#### Technical Excellence
+- **Bootstrap Integration**: Fresh Bootstrap 5.3.2 and Bootstrap Icons 1.11.3 with proper asset integrity
+- **Responsive Design**: Mobile-friendly interface with collapsible sections and space-efficient design
+- **Form Validation**: HTML5 validation with JavaScript enhancement and selective auto-save functionality
+- **Error Handling**: Comprehensive error handling with proper encoding and robust template management
+- **Database Architecture**: SQLAlchemy-based models with JSON storage and efficient relationship management
+
+### 🔧 Technical Improvements
 - **Filter Recommendations**: Smart filter recommendations based on target type
 
 #### Time Management & Planning
@@ -36,44 +77,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Real-time Calculations**: Dynamic updates as you modify exposure plans
 - **Multi-format Display**: Times shown in both minutes and H:M:S throughout the interface
 
-#### Visual Planning Tools
-- **Enhanced Altitude Charts**: Professional charts with threshold lines and window shading
-- **Window Visualization**: Green shading for valid imaging times, gray for invalid periods
-- **Interactive Elements**: Tooltips showing window status and enhanced hover interactions
-- **Threshold Indicators**: Visual markers for minimum altitude requirements
+- **Fresh Bootstrap Assets**: Updated to Bootstrap 5.3.2 and Bootstrap Icons 1.11.3 with proper asset integrity
+- **JavaScript Error Resolution**: Fixed Bootstrap JavaScript corruption and undefined reference errors
+- **Template Encoding**: Proper UTF-8 encoding for all templates with comprehensive error handling
+- **Database Model Updates**: Enhanced models for session editing and custom filter support
+- **Route Architecture**: New `/session/<id>/edit` and `/session/<id>/delete` routes with proper validation
 
-#### Observatory Integration
-- **N.I.N.A. Export**: Direct export to N.I.N.A. Advanced Sequencer format
-- **Template System**: Customizable sequence templates with dynamic block generation
-- **Automated Sequences**: Automatic generation including cooling, filtering, and parking
+### 🔄 Migration from Previous Versions
+- **Database Compatibility**: Maintains backward compatibility with existing data
+- **Asset Updates**: Fresh Bootstrap assets resolve display issues and JavaScript errors
+- **Template Updates**: Enhanced templates with improved encoding and functionality
+- **Configuration Preservation**: All existing settings and data remain intact
 
-#### Configuration Management
-- **Global Settings**: Observer location (lat/lon/elevation), timezone, default pack-up time, min altitude
-- **Per-target Overrides**: Ability to override global settings for individual targets
-- **Database Initialization**: Automated setup with sensible defaults
-- **Windows Compatibility**: Robust timezone handling for Windows systems
+### 🎯 Future Development
 
-### 🛠️ Technical Features
+Version 1.0.0 establishes the foundation for future enhancements:
+- **PostgreSQL Support**: Planned for v2.0 to enable cloud deployment capabilities
+- **AI Session Recommendations**: Weather integration and machine learning-driven session optimization
+- **Mobile Optimization**: Enhanced mobile interface for field use
+- **Additional Observatory Integrations**: Support for more telescope control software
 
-#### Architecture
-- **Flask 3.0.3**: Modern Python web framework
-- **SQLAlchemy 2.0.32**: Advanced database ORM with relationship management
-- **SQLite Database**: Lightweight, file-based database with full migration support
+### 📝 Documentation
+
+- **Complete Feature Roadmap**: Comprehensive documentation of all implemented features
+- **Updated README**: Detailed feature list and quick start guide
+- **Version Tracking**: Proper semantic versioning with VERSION file
+- **Change Documentation**: Complete changelog with feature details and technical improvements
+
+---
+
+## Previous Development History
+
+### Core Foundation (December 2025)
+- **Target Management System**: Project-based target organization with creation tracking
+- **Session Planning**: Tonight's recommendations with window calculations  
+- **Palette Management**: Database-driven custom palette system
+- **NINA Integration**: Advanced Sequencer export with template support
+- **Global Configuration**: Observer location and settings management
+- **Altitude Charts**: Visual planning tools with threshold indicators and window shading
+- **Progress Tracking**: Comprehensive imaging session logging with statistics
+- **Custom Filter System**: Real-time calculations with NINA mapping support
+
+### Technical Foundation
+- **Flask Architecture**: Modern Python web framework with SQLAlchemy ORM
+- **Astronomical Computing**: Astropy and Astroplan integration for professional calculations
+- **Database Design**: Comprehensive models with foreign key relationships and data integrity
 - **Responsive UI**: Bootstrap-based interface optimized for desktop planning workflows
-
-#### Astronomical Computing
-- **Astropy Integration**: Professional-grade astronomical calculations
-- **Astroplan Integration**: Advanced observation planning capabilities
-- **Timezone Support**: Robust local timezone handling with Windows compatibility
-- **Coordinate Systems**: Support for various astronomical coordinate formats
-
-#### Data Management
-- **Database Models**: GlobalConfig, TargetType, Palette, Target, TargetPlan, ImagingSession, ObjectMapping
-- **Migration Support**: CLI commands for database initialization and updates
-- **Data Integrity**: Foreign key relationships and validation
-- **Backup Friendly**: Human-readable SQLite format
-
-### 🎯 User Experience
+- **Windows Compatibility**: Robust timezone handling and path management
 
 #### Interface Design
 - **Dark Theme**: Optimized for nighttime use with astronomy-friendly color scheme

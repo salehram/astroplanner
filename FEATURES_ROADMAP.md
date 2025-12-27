@@ -1,8 +1,10 @@
 # AstroPlanner – Feature Roadmap  
-*Status: Updated to 2025-12-25*
+*Status: Updated to 2025-12-27 | Version 1.0.0*
 
 This document tracks the major features of the AstroPlanner project, what has been completed, and what remains.  
 It is intended to be version-controlled in Git for transparency, planning, and future development.
+
+**🎉 Version 1.0.0 Release - Complete Feature Set**
 
 ---
 
@@ -318,12 +320,24 @@ Major enhancements to the imaging progress tracking system, including automated 
 - **Enhanced Visual Design**: Improved contrast and styling for better visibility and user experience
 - **Responsive Layout**: Optimized form layout and spacing for different screen sizes
 
+### 10.9 Imaging Progress Edit & Delete Functionality
+- **Edit Session Interface**: Complete edit form for modifying existing imaging sessions with real-time calculations
+- **Delete Session with Confirmation**: Safe deletion with confirmation dialog to prevent accidental removals
+- **Universal Access**: Edit and delete buttons available in both target detail page and global imaging logs
+- **Comprehensive Editing**: Support for modifying date, channel, sub-exposure time, frame count, and session notes
+- **Data Integrity**: Form validation ensures data consistency and prevents invalid entries
+- **User Experience**: Intuitive pencil (edit) and trash (delete) icons with proper Bootstrap Icons integration
+- **Error Handling**: Robust error handling with proper encoding and template management
+
 ### Technical Implementation
 - **Frontend**: Enhanced JavaScript calculation engine with `recalcFrames()` and `calculateCustomFilterValues()` functions
 - **Backend**: Updated Flask routes with proper decimal handling in `add_progress` and `update_plan` endpoints  
 - **Database**: Seamless integration with existing JSON plan structure for custom filter persistence
 - **NINA Integration**: Enhanced `nina_integration.py` with custom filter mapping support
 - **Form Handling**: Improved HTML5 validation management and selective auto-save implementation
+- **Edit/Delete Routes**: New `/session/<id>/edit` and `/session/<id>/delete` routes with proper error handling
+- **Template System**: UTF-8 encoded `edit_session.html` template with responsive design and real-time updates
+- **Bootstrap Assets**: Fresh Bootstrap 5.3.2 and Bootstrap Icons 1.11.3 with proper asset integrity
 - **UI/UX**: Bootstrap-based responsive design with collapse functionality and improved accessibility
 
 ### User Benefits
@@ -335,6 +349,8 @@ Major enhancements to the imaging progress tracking system, including automated 
 - **Optimized User Control**: Selective auto-save prevents unwanted changes while maintaining convenience
 - **Better Data Organization**: Logical column ordering and space-efficient interface design
 - **Professional Workflow**: Enterprise-grade form validation and error handling
+- **Error Correction**: Easy correction of mistakes in imaging session data without re-entry
+- **Data Management**: Complete control over imaging session records with safe deletion options
 
 ### Status  
 **✅ Fully implemented and working.**

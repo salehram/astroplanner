@@ -8,44 +8,60 @@ A comprehensive web-based tool for planning astrophotography sessions and managi
 ![Flask](https://img.shields.io/badge/flask-3.0.3-red.svg)
 ![Status](https://img.shields.io/badge/status-stable-success.svg)
 
+## � Version 1.0.0 - Complete Feature Set
+
+AstroPlanner v1.0.0 represents a mature, feature-complete astrophotography planning platform with comprehensive target management, session tracking, and telescope integration capabilities.
+
 ## 🌟 Features
 
-### 📊 Target Management
-- **Project-based Organization**: Each target is treated as its own imaging project
+### 📊 Target Management & Planning
+- **Project-based Organization**: Each target is treated as its own imaging project with dedicated tracking
 - **Creation Tracking**: Automatic timestamp tracking with local timezone support
-- **Target Settings**: Per-target overrides for pack-up time and minimum altitude
+- **Target Settings**: Per-target overrides for pack-up time and minimum altitude constraints
 - **Priority Scoring**: Intelligent priority calculation based on completion percentage, remaining time, and tonight's window
+- **Advanced Filter System**: Custom filter addition with real-time bidirectional calculations (minutes ↔ frames ↔ exposure time)
+- **NINA Filter Mapping**: Custom filters map to standard telescope filter wheel names for hardware compatibility
 
-### 🎯 Session Planning
+### 🎯 Session Planning & Execution
 - **Tonight's Recommendation**: AI-driven target recommendations for optimal session planning
 - **Window Calculations**: Automatic calculation of imaging windows based on:
   - Sunset and astronomical darkness times
-  - Target altitude constraints
-  - Observer location and timezone
-- **Progress Tracking**: Comprehensive tracking of completed vs. planned exposures
+  - Target altitude constraints with visual chart indicators
+  - Observer location and timezone with global configuration
+- **Progress Tracking**: Comprehensive tracking with edit/delete functionality for session records
 - **Time Management**: Flexible time input with H:M:S formatting and bidirectional conversions
+- **Imaging Logs**: Complete session history with statistics, analytics, and backdating support
 
-### 🎨 Palette Management
-- **Custom Palettes**: Create and manage custom filter palettes for different targets
-- **Database-driven**: Full CRUD operations for palette management
-- **Filter Recommendations**: Smart filter recommendations based on target type
+### 🎨 Palette & Filter Management
+- **Custom Palettes**: Create and manage custom filter palettes with JSON-based storage
+- **Database-driven CRUD**: Full palette management with system vs. custom palette protection
+- **Filter Recommendations**: Smart filter recommendations based on target type and palette selection
+- **Auto-populated Dropdowns**: Filter selection automatically populates from active target plans
 
-### 📈 Advanced Planning
-- **Bidirectional Frame/Time Inputs**: Change frame counts to update exposure times and vice versa
-- **Real-time Calculations**: Dynamic updates as you modify exposure plans
-- **Status Indicators**: Visual badges showing completion status and tonight's potential
-- **Multi-format Time Display**: Times shown in both minutes and H:M:S format
+### 📈 Advanced Planning & Calculations
+- **Bidirectional Frame/Time Inputs**: Change frame counts to update exposure times and vice versa with decimal precision
+- **Real-time Calculations**: Dynamic updates as you modify exposure plans with JavaScript validation
+- **Status Indicators**: Visual badges showing completion status and tonight's imaging potential
+- **Multi-format Time Display**: Times shown in both minutes and H:M:S format throughout the interface
+- **Custom Filter Addition**: On-the-fly custom filter addition with auto-save and NINA compatibility
 
-### 🔧 NINA Integration
+### 🔧 NINA Integration & Export
 - **Export Compatibility**: Direct export to N.I.N.A. (Nighttime Imaging 'N' Astronomy) Advanced Sequencer
-- **Template System**: Customizable sequence templates
-- **Dynamic Block Generation**: Automatic sequence generation with cooling, filtering, and parking
+- **Template System**: Customizable sequence templates with dynamic block generation
+- **Filter Wheel Integration**: Custom filter mapping ensures proper telescope hardware operation
+- **Remaining Frames Export**: Intelligent export of only remaining frames for efficient session continuation
 
-### 🌍 Global Configuration
-- **Observer Location**: Configurable latitude, longitude, and elevation
-- **Timezone Support**: Robust timezone handling with Windows compatibility
-- **Default Settings**: Global defaults for pack-up time and minimum altitude
-- **Per-target Overrides**: Ability to override global settings per target
+### 🌍 Global Configuration & Settings
+- **Observer Location**: Configurable latitude, longitude, and elevation with global defaults
+- **Timezone Support**: Robust timezone handling with Windows compatibility and UTC conversion
+- **Default Settings**: Global defaults for pack-up time and minimum altitude with per-target overrides
+- **Settings Management**: Dedicated configuration interface for both global and per-target settings
+
+### 📊 Data Management & Analytics
+- **Session Edit/Delete**: Complete CRUD operations for imaging session management with confirmation dialogs
+- **Comprehensive Logs**: Imaging session tracking with date grouping, statistics, and monthly summaries
+- **Progress Analytics**: Daily, monthly, and overall imaging statistics with visual indicators
+- **Data Integrity**: Form validation, error handling, and database consistency maintenance
 
 ## 🚀 Quick Start
 
