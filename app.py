@@ -1056,6 +1056,59 @@ def add_progress(target_id):
     return redirect(url_for("target_detail", target_id=target.id))
 
 
+@app.route("/session/<int:session_id>/edit", methods=["GET", "POST"])
+def edit_session(session_id):
+    """Edit an imaging session."""
+    session = ImagingSession.query.get_or_404(session_id)
+    target = session.target
+    
+    if request.method == "POST":
+        # Update session with form data
+        session.channel = request.form.get("channel").strip().upper()
+        session.sub_exposure_seconds = float(request.form.get("sub_exposure_seconds"))
+        session.sub_count = int(request.form.get("sub_count"))
+        session.notes = request.form.get("notes")
+        
+        # Parse the imaging date
+        imaging_date_str = request.form.get("imaging_date")
+        if imaging_date_str:
+            from datetime import datetime as dt
+            session.date = dt.strptime(imaging_date_str, '%Y-%m-%d').date()
+        
+        db.session.commit()
+        flash("Session updated successfully.", "success")
+        return redirect(url_for("target_detail", target_id=target.id))
+    
+    # GET request - show edit form
+    # Get all channel names from target plan for dropdown
+    channels = []
+    plan = (
+        TargetPlan.query
+        .filter_by(target_id=target.id, palette_name=target.preferred_palette)
+        .order_by(TargetPlan.created_at.desc())
+        .first()
+    )
+    if plan:
+        plan_data = json.loads(plan.plan_json)
+        for channel_name in plan_data.keys():
+            channels.append(channel_name)
+    
+    return render_template("edit_session.html", session=session, target=target, channels=channels)
+
+
+@app.route("/session/<int:session_id>/delete", methods=["POST"])
+def delete_session(session_id):
+    """Delete an imaging session."""
+    session = ImagingSession.query.get_or_404(session_id)
+    target_id = session.target_id
+    
+    db.session.delete(session)
+    db.session.commit()
+    
+    flash("Session deleted successfully.", "success")
+    return redirect(url_for("target_detail", target_id=target_id))
+
+
 @app.route("/imaging-logs")
 def imaging_logs():
     """Display all imaging sessions grouped by date to track imaging days."""
