@@ -21,8 +21,14 @@ from nina_integration import load_nina_template, build_nina_sequence_from_blocks
 from time_utils import register_time_filters, format_hms, parse_hms, hms_to_minutes
 from zoneinfo import ZoneInfo
 
+# Import database configuration
+from config.database import get_flask_config
+
+# Import CLI commands
+from cli import register_cli_commands
+
 # Application version
-APP_VERSION = "1.0.0"
+APP_VERSION = "2.0.0-dev"
 APP_NAME = "AstroPlanner"
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -39,13 +45,14 @@ def inject_version():
         'datetime': datetime
     }
 
-# --- Database config (SQLite by default, override with DATABASE_URL) ---------
-db_url = os.environ.get("DATABASE_URL") or \
-         "sqlite:///" + os.path.join(BASE_DIR, "astroplanner.db")
-app.config["SQLALCHEMY_DATABASE_URI"] = db_url
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+# --- Database configuration with PostgreSQL support ----------------------
+flask_config, db_config = get_flask_config(BASE_DIR)
+app.config.update(flask_config)
 
 db = SQLAlchemy(app)
+
+# Register CLI commands
+register_cli_commands(app)
 
 # Register time formatting filters
 register_time_filters(app)
