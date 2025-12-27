@@ -1082,13 +1082,8 @@ def edit_session(session_id):
     # GET request - show edit form
     # Get all channel names from target plan for dropdown
     channels = []
-    plan = (
-        TargetPlan.query
-        .filter_by(target_id=target.id, palette_name=target.preferred_palette)
-        .order_by(TargetPlan.created_at.desc())
-        .first()
-    )
-    if plan:
+    if target.plans:
+        plan = target.plans[0]  # Get the first/main plan
         plan_data = json.loads(plan.plan_json)
         for channel_name in plan_data.keys():
             channels.append(channel_name)
